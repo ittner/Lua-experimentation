@@ -14,6 +14,7 @@
 #include "lobject.h"
 #include "lopcodes.h"
 #include "lundump.h"
+#include "lnum.h"
 
 #define PrintFunction	luaU_print
 
@@ -59,8 +60,12 @@ static void PrintConstant(const Proto* f, int i)
   case LUA_TBOOLEAN:
 	printf(bvalue(o) ? "true" : "false");
 	break;
-  case LUA_TNUMBER:
-	printf(LUA_NUMBER_FMT,nvalue(o));
+#ifdef LUA_TINT
+  case LUA_TINT:
+#endif
+  case LUA_TNUMBER: {
+    char s[LUAI_MAXNUMBER2STR];
+    luaO_num2buf(s,o); puts(s); }
 	break;
   case LUA_TSTRING:
 	PrintString(rawtsvalue(o));

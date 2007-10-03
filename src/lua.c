@@ -16,7 +16,7 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
-
+#include "llimits.h"
 
 
 static lua_State *globalL = NULL;
@@ -158,7 +158,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
 }
 
 
-static int incomplete (lua_State *L, int status) {
+static lu_bool incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX) {
     size_t lmsg;
     const char *msg = lua_tolstring(L, -1, &lmsg);
@@ -172,7 +172,7 @@ static int incomplete (lua_State *L, int status) {
 }
 
 
-static int pushline (lua_State *L, int firstline) {
+static lu_bool pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
   char *b = buffer;
   size_t l;
@@ -289,7 +289,7 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
 }
 
 
-static int runargs (lua_State *L, char **argv, int n) {
+static lu_bool runargs (lua_State *L, char **argv, int n) {
   int i;
   for (i = 1; i < n; i++) {
     if (argv[i] == NULL) continue;

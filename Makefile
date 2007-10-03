@@ -53,7 +53,7 @@ R= 5.1.2
 all:	$(PLAT)
 
 $(PLATS) clean:
-	cd src && $(MAKE) $@
+	cd src && $(MAKE) $@ MYCFLAGS=$(MYCFLAGS)
 
 test:	dummy
 	src/lua test/hello.lua

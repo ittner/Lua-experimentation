@@ -1,0 +1,34 @@
+
+
+Ideas for LNUM patch:
+---------------------
+
+- The test suite should be better, more coverage and better intended for
+  all the possible modes there are:
+  
+        (LNUM_DOUBLE)
+        (LNUM_DOUBLE) + LNUM_INT32
+        (LNUM_DOUBLE) + LNUM_INT64
+        LNUM_FLOAT
+        LNUM_FLOAT + LNUM_INT32
+        LNUM_FLOAT + LNUM_INT64
+        LNUM_LDOUBLE
+        LNUM_LDOUBLE + LNUM_INT32
+        LNUM_LDOUBLE + LNUM_INT32
+
+        ... and the same with LNUM_COMPLEX
+
+
+Known bugs:
+-----------
+
+    AKa 2-Oct-2007
+    
+    No known bugs exist, but the code has NOT BEEN WIDELY TESTED since major
+    complex number rewrite in 1-3 Oct 2007!
+
+
+    
+Findings, test reports & suggestions welcome at: <akauppi@gmail.com>
+
+Thanks. :)
