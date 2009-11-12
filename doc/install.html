@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Installation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="Author" content="Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2009, Mike Pall">
+<meta name="Language" content="en">
+<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
+<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
+</head>
+<body>
+<div id="site">
+<a href="http://coco.luajit.org"><span>Co<span id="logo">Co</span></span></a>
+</div>
+<div id="head">
+<h1>Installation</h1>
+</div>
+<div id="nav">
+<ul><li>
+<a href="index.html">Coco</a>
+</li><li>
+<a class="current" href="install.html">Installation</a>
+</li><li>
+<a href="portability.html">Portability</a>
+</li><li>
+<a href="api.html">API Extensions</a>
+</li><li>
+<a href="changes.html">Changes</a>
+</li><li>
+<a href="http://coco.luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
+</li></ul>
+</div>
+<div id="main">
+<p>
+This page explains how to build Coco by modifying the original Lua sources.
+</p>
+<h2>Prerequisites</h2>
+<p>
+Coco needs some machine-specific features &mdash; please have a look
+at the <a href="portability.html">Portability Requirements</a>.
+</p>
+<p>
+Coco is distributed as a patch set against a specific version of the
+standard Lua distribution. You need to download the following file:<br>
+<a href="http://www.lua.org/ftp/lua-5.1.4.tar.gz"><span class="ext">&raquo;</span>&nbsp;http://www.lua.org/ftp/lua-5.1.4.tar.gz</a>
+</p>
+<p>
+Next, you need the "patch" utility to apply the patch set.
+This program is available on most Linux or BSD distributions or
+can be installed from their package managers. Users of other operating
+systems should check out
+<a href="http://lua-users.org/wiki/LuaPowerPatches"><span class="ext">&raquo;</span>&nbsp;this Wiki page</a>
+</p>
+<p>
+To run the commands presented in the following sections, open
+a terminal/command window and change to the directory where you've
+downloaded the archives of the Lua sources and the Coco sources.
+</p>
+<h2>Unpacking and Patching</h2>
+<p>
+Either unpack the Lua sources and the Coco sources using an archive
+manager (e.g. the Windows Explorer) or run the following commands:
+</p>
+<pre class="code">
+tar zxf LuaCoco-1.1.6.tar.gz
+tar zxf lua-5.1.4.tar.gz
+mv lua-5.1.4 lua-5.1.4-coco
+</pre>
+<p>
+Then change to the Lua source directory and apply the patch file which
+is distributed with the Coco sources:
+</p>
+<pre class="code">
+cd lua-5.1.4-coco
+patch -p1 &lt;../LuaCoco-1.1.6/lua-5.1.4-coco-1.1.6.patch
+</pre>
+<h2>Building Lua</h2>
+<p>
+Optionally modify any configuration files, then follow the installation
+instructions from the standard Lua sources. I.e. run make and supply your
+platform as a target, like:
+<pre class="code">
+make linux
+  <i>- or -</i>
+make macosx
+  <i>etc.</i>
+</pre>
+<p>
+Or use <tt>etc/luavs.bat</tt> to build Lua with MSVC.
+</p>
+<h2>Testing Coco</h2>
+<p>
+To check that your modified version of Lua works, try some simple tests:
+</p>
+<pre class="code">
+./src/lua ../LuaCoco-1.1.6/test/cotest.lua
+./src/lua ../LuaCoco-1.1.6/test/cocreate.lua
+./src/lua ../LuaCoco-1.1.6/test/comessage.lua
+./src/lua ../LuaCoco-1.1.6/test/chameneos.lua
+</pre>
+<br class="flush">
+</div>
+<div id="foot">
+<hr class="hide">
+Copyright &copy; 2005-2009 Mike Pall
+<span class="noprint">
+&middot;
+<a href="contact.html">Contact</a>
+</span>
+</div>
+</body>
+</html>
