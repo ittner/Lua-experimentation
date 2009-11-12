@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- DynASM x86 module.
 --
--- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2008 Mike Pall. All rights reserved.
 -- See dynasm.lua for full copyright notice.
 ------------------------------------------------------------------------------
 
@@ -9,9 +9,9 @@
 local _info = {
   arch =	"x86",
   description =	"DynASM x86 (i386) module",
-  version =	"1.1.3",
-  vernum =	 10103,
-  release =	"2007-05-24",
+  version =	"1.1.4",
+  vernum =	 10104,
+  release =	"2008-01-29",
   author =	"Mike Pall",
   license =	"MIT",
 }
@@ -990,7 +990,7 @@ local map_op = {
   cmppd_3 =	"rmio:660FC2rMU",
   cmpps_3 =	"rmio:0FC2rMU",
   cmpsd_3 =	"rmio:F20FC2rMU",
-  cmpsd_3 =	"rmio:F30FC2rMU",
+  cmpss_3 =	"rmio:F30FC2rMU",
   comisd_2 =	"rmo:660F2FrM",
   comiss_2 =	"rmo:0F2FrM",
   cvtdq2pd_2 =	"rro:F30FE6rM|rx/oq:",

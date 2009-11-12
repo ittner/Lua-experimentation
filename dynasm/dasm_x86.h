@@ -1,6 +1,6 @@
 /*
 ** DynASM x86 encoding engine.
-** Copyright (C) 2005-2007 Mike Pall. All rights reserved.
+** Copyright (C) 2005-2008 Mike Pall. All rights reserved.
 ** Released under the MIT/X license. See dynasm.lua for full copyright notice.
 */
 
@@ -8,6 +8,8 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+
+#define DASM_ARCH		"x86"
 
 /* Action definitions. DASM_STOP must be 255. */
 enum {

@@ -143,10 +143,12 @@ linux_rl:
 
 # Mac OS X on Intel Macs only!
 macosx:
-	$(MAKE) all MYCFLAGS=-DLUA_USE_MACOSX
+	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX
+# use this on Mac OS X 10.3
+#	$(MAKE) all MYCFLAGS=-DLUA_USE_MACOSX
 
 macosx_rl:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_MACOSX -DLUA_USE_READLINE" MYLIBS="-lreadline"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -DLUA_USE_READLINE" MYLIBS="-lreadline"
 
 mingw:
 	$(MAKE) "LUA_A=lua51.dll" "LUA_T=luajit.exe" \

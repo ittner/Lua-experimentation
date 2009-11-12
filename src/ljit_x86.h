@@ -1,17 +1,17 @@
 /*
 ** This file has been pre-processed with DynASM.
 ** http://luajit.org/dynasm.html
-** DynASM version 1.1.3, DynASM x86 version 1.1.3
+** DynASM version 1.1.4, DynASM x86 version 1.1.4
 ** DO NOT EDIT! The original file is in "ljit_x86.dasc".
 */
 
-#if DASM_VERSION != 10103
+#if DASM_VERSION != 10104
 #error "Version mismatch between DynASM and included encoding engine"
 #endif
 
 /*
 ** Bytecode to machine code translation for x86 CPUs.
-** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2008 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define DASM_SECTION_CODE	0
@@ -565,7 +565,7 @@ static void jit_checkGC(jit_State *J)
 
 /*
 ** Function inlining support for x86 CPUs.
-** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2008 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* ------------------------------------------------------------------------ */
@@ -1793,7 +1793,7 @@ static void jit_op_arith(jit_State *J, int dest, int rkb, int rkc, int ev)
       }
     } else if (kval->n > (lua_Number)0) {  /* k^x for k > 0. */
       int log2kval[3];  /* Enough storage for a tword (80 bits). */
-      log2kval[3] = 0;  /* Avoid leaking garbage. */
+      log2kval[2] = 0;  /* Avoid leaking garbage. */
       /* Double precision log2(k) doesn't cut it (3^x != 3 for x = 1). */
       ((void (*)(int *, double))J->jsub[JSUB_LOG2_TWORD])(log2kval, kval->n);
       dasm_put(Dst, 3942, log2kval[0], log2kval[1], log2kval[2], Dt2([idx].tt), Dt2([idx].value));

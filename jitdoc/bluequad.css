@@ -1,4 +1,4 @@
-/* Copyright (C) 2004-2007 Mike Pall.
+/* Copyright (C) 2004-2008 Mike Pall.
  *
  * You are welcome to use the general ideas of this design for your own sites.
  * But please do not steal the stylesheet, the layout or the color scheme.
@@ -110,9 +110,13 @@ dd {
   margin: 0.5em 0 0 2em;
   padding: 0;
 }
+div.tablewrap { /* for IE *sigh* */
+  max-width: 600px;
+}
 table {
   table-layout: fixed;
   border-spacing: 0;
+  border-collapse: collapse;
   max-width: 600px;
   width: 100%;
   margin: 1em 0;
@@ -150,9 +154,6 @@ blockquote, pre {
 }
 pre {
   line-height: 1.1;
-}
-abbr, acronym {
-  font: inherit;
 }
 img {
   border: none;
@@ -197,9 +198,9 @@ img.right {
 }
 #site a:link, #site a:visited {
   text-decoration: none;
-  font-weight: inherit;
+  font-weight: bold;
   background: transparent;
-  color: inherit;
+  color: #ffffff;
 }
 #site span {
   line-height: 3em; /* really 6em relative to body, match h1 */
@@ -282,7 +283,7 @@ img.right {
 #foot a:link, #foot a:visited {
   text-decoration: underline;
   background: transparent;
-  color: inherit;
+  color: #ffffff;
 }
 #foot a:hover, #foot a:active {
   text-decoration: underline;

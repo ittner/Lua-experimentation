@@ -1,4 +1,4 @@
-/* Copyright (C) 2004-2007 Mike Pall.
+/* Copyright (C) 2004-2008 Mike Pall.
  *
  * You are welcome to use the general ideas of this design for your own sites.
  * But please do not steal the stylesheet, the layout or the color scheme.
@@ -102,9 +102,6 @@ blockquote, pre {
   margin: 1em 2em;
   padding: 0;
 }
-abbr, acronym {
-  font: inherit;
-}
 img {
   border: none;
   vertical-align: baseline;
@@ -141,9 +138,9 @@ img.right {
 }
 #site a:link, #site a:visited {
   text-decoration: none;
-  font-weight: inherit;
+  font-weight: bold;
   background: transparent;
-  color: inherit;
+  color: #ffffff;
 }
 #logo {
   color: #ff8000;

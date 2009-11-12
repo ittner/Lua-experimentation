@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2004-2007 Mike Pall. All rights reserved.
+** Copyright (C) 2004-2008 Mike Pall. All rights reserved.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining
 ** a copy of this software and associated documentation files (the
@@ -223,7 +223,7 @@ typedef void *coco_ctx[2];  /* ra, sp */
   buf[4] = (int)(stack); \
   buf[3] = 0; \
   COCO_SETJMP_X86(coco, stack, a0)
-#elif defined(__MACH__) && defined(_BSD_I386_SETJMP_H_)	/* x86-macosx */
+#elif defined(__MACH__) && defined(_BSD_I386_SETJMP_H)	/* x86-macosx */
 #define COCO_PATCHCTX(coco, buf, func, stack, a0) \
   buf[12] = (int)(func); \
   buf[9] = (int)(stack); \
@@ -286,6 +286,9 @@ typedef void *coco_ctx[2];  /* ra, sp */
 #elif defined(__arm__) || defined(__ARM__)
 
 #if __GLIBC__ == 2 || defined(__UCLIBC__)	/* arm-linux-glibc2 */
+#ifndef __JMP_BUF_SP
+#define __JMP_BUF_SP	((sizeof(__jmp_buf)/sizeof(int))-2)
+#endif
 #define COCO_PATCHCTX(coco, buf, func, stack, a0) \
   buf->__jmpbuf[__JMP_BUF_SP+1] = (int)(func); /* pc */ \
   buf->__jmpbuf[__JMP_BUF_SP] = (int)(stack); /* sp */ \

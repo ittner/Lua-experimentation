@@ -1,6 +1,6 @@
 /*
 ** Interface to JIT engine.
-** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2008 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define ljit_core_c

@@ -4,7 +4,7 @@
 <title>Installing LuaJIT</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 <meta name="Author" content="Mike Pall">
-<meta name="Copyright" content="Copyright (C) 2005-2007, Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2008, Mike Pall">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -13,14 +13,15 @@ table.build {
   line-height: 1.2;
 }
 td.buildsys {
-  width: 10em;
+  width: 11em;
 }
 td.buildcmd {
   width: 10em;
   font-family: Courier New, Courier, monospace;
 }
 tr.buildhead td {
-  font-family: inherit;
+  /* font-family: inherit; ... not supported in IE *sigh* */
+  font-family: Verdana, Arial, Helvetica, sans-serif;
   font-weight: bold;
 }
 </style>
@@ -157,17 +158,19 @@ in <tt>src/lua.h</tt> is the same in both distributions.
 The Makefiles have a number of targets for various operating systems:
 </p>
 
+<div class="tablewrap">
 <table class="build">
 <tr class="buildhead"><td class="buildsys">System</td><td class="buildcmd">Build Command</td><td>Notes</td></tr>
-<tr class="odd"><td>Linux i386</td><td class="buildcmd">make linux</td><td></td></tr>
-<tr class="even"><td>BSD i386</td><td class="buildcmd">make bsd</td><td>FreeBSD, NetBSD or OpenBSD</td></tr>
-<tr class="odd"><td>Mac OS X on Intel</td><td class="buildcmd">make macosx</td><td></td></tr>
-<tr class="even"><td>Solaris x86</td><td class="buildcmd">make solaris</td><td>GCC only, SunCC miscompiles LuaJIT</td></tr>
-<tr class="odd"><td>MinGW (Win32)</td><td class="buildcmd">make mingw</td><td>cross-MinGW: must be 1st in PATH</td></tr>
-<tr class="even"><td>Cygwin</td><td class="buildcmd">make cygwin</td><td></td></tr>
-<tr class="odd"><td>POSIX on x86</td><td class="buildcmd">make posix</td><td>Check <a href="coco_portability.html">Portability Req. for Coco</a>, too</td></tr>
-<tr class="even"><td>Generic x86</td><td class="buildcmd">make generic</td><td>Check <a href="coco_portability.html">Portability Req. for Coco</a>, too</td></tr>
+<tr class="odd"><td class="buildsys">Linux i386</td><td class="buildcmd">make linux</td><td></td></tr>
+<tr class="even"><td class="buildsys">BSD i386</td><td class="buildcmd">make bsd</td><td>FreeBSD, NetBSD or OpenBSD</td></tr>
+<tr class="odd"><td class="buildsys">Mac OS X on Intel</td><td class="buildcmd">make macosx</td><td>Check <tt>src/Makefile</tt> for OS X &lt; 10.4</td></tr>
+<tr class="even"><td class="buildsys">Solaris x86</td><td class="buildcmd">make solaris</td><td>GCC only, SunCC miscompiles LuaJIT</td></tr>
+<tr class="odd"><td class="buildsys">MinGW (Win32)</td><td class="buildcmd">make mingw</td><td>cross-MinGW: must be 1st in PATH</td></tr>
+<tr class="even"><td class="buildsys">Cygwin</td><td class="buildcmd">make cygwin</td><td></td></tr>
+<tr class="odd"><td class="buildsys">POSIX on x86</td><td class="buildcmd">make posix</td><td>Check <a href="coco_portability.html">Portability Req. for Coco</a>, too</td></tr>
+<tr class="even"><td class="buildsys">Generic x86</td><td class="buildcmd">make generic</td><td>Check <a href="coco_portability.html">Portability Req. for Coco</a>, too</td></tr>
 </table>
+</div>
 
 <p>
 You may want to enable interactive line editing for the stand-alone
@@ -327,7 +330,7 @@ Thank you!
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2007 Mike Pall
+Copyright &copy; 2005-2008 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

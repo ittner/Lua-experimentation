@@ -1,6 +1,6 @@
 /*
 ** Lua library for the JIT engine.
-** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2008 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include <stdio.h>
@@ -506,8 +506,8 @@ static int ju_mcode(lua_State *L)
     tr.mcode = (char *)pt->jit_mcode;
     tr.sz = pt->jit_szmcode;
     while (--block > 0) {
-      memcpy((void *)&tr, JIT_MCTRAILER(tr.mcode, tr.sz),
-	     sizeof(jit_MCTrailer));
+      void *trp = JIT_MCTRAILER(tr.mcode, tr.sz);
+      memcpy((void *)&tr, trp, sizeof(jit_MCTrailer));
       if (tr.sz == 0) return 0;
     }
     mfm = JIT_MCMFM(tr.mcode, tr.sz);

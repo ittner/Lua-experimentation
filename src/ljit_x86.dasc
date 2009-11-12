@@ -1,6 +1,6 @@
 /*
 ** Bytecode to machine code translation for x86 CPUs.
-** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2008 Mike Pall. See Copyright Notice in luajit.h
 */
 
 |// Include common definitions and macros.
@@ -1743,7 +1743,7 @@ static void jit_op_arith(jit_State *J, int dest, int rkb, int rkc, int ev)
       }
     } else if (kval->n > (lua_Number)0) {  /* k^x for k > 0. */
       int log2kval[3];  /* Enough storage for a tword (80 bits). */
-      log2kval[3] = 0;  /* Avoid leaking garbage. */
+      log2kval[2] = 0;  /* Avoid leaking garbage. */
       /* Double precision log2(k) doesn't cut it (3^x != 3 for x = 1). */
       ((void (*)(int *, double))J->jsub[JSUB_LOG2_TWORD])(log2kval, kval->n);
       |  mov ARG1, log2kval[0]			// Abuse stack for tword const.

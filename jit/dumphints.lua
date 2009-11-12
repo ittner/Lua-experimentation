@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 -- LuaJIT hints dumper module.
 --
--- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2008 Mike Pall. All rights reserved.
 -- Released under the MIT/X license. See luajit.h for full copyright notice.
 ----------------------------------------------------------------------------
 -- Activate this module to dump the bytecode and the hints from
@@ -23,7 +23,7 @@ local PRIORITY = 10
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 10103, "LuaJIT core/library version mismatch")
+assert(jit.version_num == 10104, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local type, pairs, format = type, pairs, string.format
 local bytecode, const = jutil.bytecode, jutil.const

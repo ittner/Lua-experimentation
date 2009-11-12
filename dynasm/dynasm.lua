@@ -2,7 +2,7 @@
 -- DynASM. A dynamic assembler for code generation engines.
 -- Originally designed and implemented for LuaJIT.
 --
--- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2008 Mike Pall. All rights reserved.
 -- See below for full copyright notice.
 ------------------------------------------------------------------------------
 
@@ -10,14 +10,14 @@
 local _info = {
   name =	"DynASM",
   description =	"A dynamic assembler for code generation engines",
-  version =	"1.1.3",
-  vernum =	 10103,
-  release =	"2007-05-24",
+  version =	"1.1.4",
+  vernum =	 10104,
+  release =	"2008-01-29",
   author =	"Mike Pall",
   url =		"http://luajit.org/dynasm.html",
   license =	"MIT",
   copyright =	[[
-Copyright (C) 2005-2007 Mike Pall. All rights reserved.
+Copyright (C) 2005-2008 Mike Pall. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
