@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 -- LuaJIT optimizer.
 --
--- Copyright (C) 2005-2006 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
 -- Released under the MIT/X license. See luajit.h for full copyright notice.
 ----------------------------------------------------------------------------
 -- This module contains a simple optimizer that generates some hints for
@@ -37,7 +37,7 @@ local OPTLEVEL = 2
 -- Maybe a bit on the generous side. Check ljit.h for backend limits, too.
 -- TODO: make it depend on the bytecode distribution, too.
 local LIMITS = {
-  bytecodes =	1500,
+  bytecodes =	4000,
   stackslots =	150,
   params =	20,
   consts =	200,
@@ -46,7 +46,7 @@ local LIMITS = {
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 10102, "LuaJIT core/library version mismatch")
+assert(jit.version_num == 10103, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local type, rawget, next, pcall = type, rawget, next, pcall
 local bytecode, const = jutil.bytecode, jutil.const
@@ -459,7 +459,7 @@ local function loadaddon(opt)
 end
 
 -- Attach optimizer and set optimizer level or load add-on module.
-local function setlevel(opt)
+local function setlevel_(opt)
   -- Easier to always attach the optimizer (even for -O0).
   if not active then
     jit.attach(h_opt, PRIORITY)
@@ -503,6 +503,6 @@ function getlevel()
   return optlevel
 end
 
-setlevel = setlevel
-start = setlevel -- For -O command line option.
+setlevel = setlevel_
+start = setlevel_ -- For -O command line option.
 

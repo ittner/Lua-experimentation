@@ -1,4 +1,4 @@
-/* Copyright (C) 2004-2006 Mike Pall.
+/* Copyright (C) 2004-2007 Mike Pall.
  *
  * You are welcome to use the general ideas of this design for your own sites.
  * But please do not steal the stylesheet, the layout or the color scheme.
@@ -167,6 +167,9 @@ img.left {
 img.right {
   float: right;
   margin: 0.5em 0 0.5em 1em;
+}
+.indent {
+  padding-left: 1em;
 }
 .flush {
   clear: both;

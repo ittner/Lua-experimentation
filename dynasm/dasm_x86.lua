@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- DynASM x86 module.
 --
--- Copyright (C) 2005-2006 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
 -- See dynasm.lua for full copyright notice.
 ------------------------------------------------------------------------------
 
@@ -9,9 +9,9 @@
 local _info = {
   arch =	"x86",
   description =	"DynASM x86 (i386) module",
-  version =	"1.1.1",
-  vernum =	 10101,
-  release =	"2006-06-14",
+  version =	"1.1.3",
+  vernum =	 10103,
+  release =	"2007-05-24",
   author =	"Mike Pall",
   license =	"MIT",
 }
@@ -297,6 +297,16 @@ end
 
 ------------------------------------------------------------------------------
 
+-- Put action for label arg (IMM_LG, IMM_PC, REL_LG, REL_PC).
+local function wputlabel(aprefix, imm, num)
+  if type(imm) == "number" then
+    waction(aprefix.."LG", nil, num);
+    wputxb(imm)
+  else
+    waction(aprefix.."PC", imm, num)
+  end
+end
+
 -- Put signed byte or arg.
 local function wputsbarg(n)
   if type(n) == "number" then
@@ -330,12 +340,17 @@ end
 
 -- Put signed or unsigned dword or arg.
 local function wputdarg(n)
-  if type(n) == "number" then
+  local tn = type(n)
+  if tn == "number" then
     if n < 0 then n = n + 4294967296 end
     local r = n%256; n = (n-r)/256; wputb(r);
     r = n%256; n = (n-r)/256; wputb(r);
     r = n%256; n = (n-r)/256; wputb(r); wputb(n);
-  else waction("IMM_D", n) end
+  elseif tn == "table" then
+    wputlabel("IMM_", n[1], 1)
+  else
+    waction("IMM_D", n)
+  end
 end
 
 -- Put operand-size dependent number or arg (defaults to dword).
@@ -345,16 +360,6 @@ local function wputszarg(sz, n)
   elseif sz == "b" then wputbarg(n)
   elseif sz == "s" then wputsbarg(n)
   else werror("bad operand size") end
-end
-
--- Put action for label arg (IMM_LG, IMM_PC, REL_LG, REL_PC).
-local function wputlabel(aprefix, imm, num)
-  if type(imm) == "number" then
-    waction(aprefix.."LG", nil, num);
-    wputxb(imm)
-  else
-    waction(aprefix.."PC", imm, num)
-  end
 end
 
 -- Put multi-byte opcode with operand-size dependent modifications.
@@ -383,6 +388,7 @@ local function wputmrmsib(t, s, imark)
   end
 
   local disp = t.disp
+  local tdisp = type(disp)
   -- No base register?
   if not t.reg then
     if t.xreg then
@@ -398,16 +404,18 @@ local function wputmrmsib(t, s, imark)
   end
 
   local m
-  if type(disp) == "number" then -- Check displacement size at assembly time.
+  if tdisp == "number" then -- Check displacement size at assembly time.
     if disp == 0 and t.reg ~= 5 then m = 0  -- [ebp] -> [ebp+0] (in SIB, too)
     elseif disp >= -128 and disp <= 127 then m = 1
     else m = 2 end
+  elseif tdisp == "table" then
+    m = 2
   end
 
   -- Index register present or esp as base register: need SIB encoding.
   if t.xreg or t.reg == 4 then
     wputmodrm(m or 2, s, 4) -- ModRM.
-    if m == nil or imark then waction("MARK") end
+    if (m == nil or imark) and tdisp ~= "table" then waction("MARK") end
     wputmodrm(t.xsc or 0, t.xreg or 4, t.reg) -- SIB.
   else
     wputmodrm(m or 2, s, t.reg) -- ModRM.
@@ -443,26 +451,55 @@ local function toint(expr)
   end
 end
 
+-- Parse immediate expression.
+local function immexpr(expr)
+  -- &expr (pointer)
+  if sub(expr, 1, 1) == "&" then
+    return "iPJ", format("(ptrdiff_t)(%s)", sub(expr,2))
+  end
+
+  local prefix = sub(expr, 1, 2)
+  -- =>expr (pc label reference)
+  if prefix == "=>" then
+    return "iJ", sub(expr, 3)
+  end
+  -- ->name (global label reference)
+  if prefix == "->" then
+    return "iJ", map_global[sub(expr, 3)]
+  end
+
+  -- [<>][1-9] (local label reference)
+  local dir, lnum = match(expr, "^([<>])([1-9])$")
+  if dir then -- Fwd: 247-255, Bkwd: 1-9.
+    return "iJ", lnum + (dir == ">" and 246 or 0)
+  end
+
+  -- expr (interpreted as immediate)
+  return "iI", expr
+end
+
 -- Parse displacement expression: +-num, +-expr, +-opsize*num
 local function dispexpr(expr)
   local disp = expr == "" and 0 or toint(expr)
-  if not disp then
-    local c = sub(expr, 1, 1)
-    if c == "+" then
-      disp = sub(expr, 2)
-    elseif c == '-' then
-      disp = expr
-    else
-      werror("bad displacement expression `"..expr.."'")
-    end
-    local opsize, tailops = match(expr, "^[+-]%s*(%w+)%s*%*%s*(.+)$")
-    local ops, imm = map_opsize[opsize], toint(tailops)
-    if ops and imm then
-      if c == "-" then imm = -imm end
-      disp = imm*map_opsizenum[ops]
-    end
+  if disp then return disp end
+  local c, dispt = match(expr, "^([+-])%s*(.+)$")
+  if c == "+" then
+    expr = dispt
+  elseif not c then
+    werror("bad displacement expression `"..expr.."'")
   end
-  return disp
+  local opsize, tailops = match(dispt, "^(%w+)%s*%*%s*(.+)$")
+  local ops, imm = map_opsize[opsize], toint(tailops)
+  if ops and imm then
+    if c == "-" then imm = -imm end
+    return imm*map_opsizenum[ops]
+  end
+  local mode, iexpr = immexpr(dispt)
+  if mode == "iJ" then
+    if c == "-" then werror("cannot invert label reference") end
+    return { iexpr }
+  end
+  return expr -- Need to return original signed expression.
 end
 
 -- Parse register or type expression.
@@ -514,7 +551,7 @@ local function parseoperand(param)
       if not t.reg then
 	-- [expr]
 	t.mode = "xmO"
-	t.disp = br
+	t.disp = dispexpr("+"..br)
 	break
       end
 
@@ -602,42 +639,13 @@ local function parseoperand(param)
 	t.mode = "xm"
 	t.disp = format(tp.ctypefmt, tailr)
       else
-	-- &expr (pointer)
-	if sub(expr, 1, 1) == "&" then
-	  t.imm = format("(ptrdiff_t)(%s)", sub(expr,2))
+	t.mode, t.imm = immexpr(expr)
+	if sub(t.mode, -1) == "J" then
+	  if t.opsize and t.opsize ~= addrsize then
+	    werror("bad operand size override")
+	  end
 	  t.opsize = addrsize
-	  t.mode = "iPJ"
-	  break
 	end
-
-	local prefix = sub(expr, 1, 2)
-	-- =>expr (pc label reference)
-	if prefix == "=>" then
-	  t.imm = sub(expr, 3)
-	  t.opsize = addrsize
-	  t.mode = "iJ"
-	  break
-	end
-	-- ->name (global label reference)
-	if prefix == "->" then
-	  t.imm = map_global[sub(expr, 3)]
-	  t.opsize = addrsize
-	  t.mode = "iJ"
-	  break
-	end
-
-	-- [<>][1-9] (local label reference)
-	local dir, lnum = match(expr, "^([<>])([1-9])$")
-	if dir then
-	  t.imm = lnum + (dir == ">" and 246 or 0) -- Fwd: 247-255, Bkwd: 1-9.
-	  t.opsize = addrsize
-	  t.mode = "iJ"
-	  break
-	end
-
-	-- expr (interpreted as immediate)
-	t.mode = "iI"
-	t.imm = expr
       end
     end
   until true
@@ -971,7 +979,7 @@ local map_op = {
   fsin_0 =	"D9FE",
   fcos_0 =	"D9FF",
 
-  -- SSE, SSE2, SSE3, SSE4 ops
+  -- SSE, SSE2, SSE3, SSSE3 ops
   addsubpd_2 =	"rmo:660FD0rM",
   addsubps_2 =	"rmo:F20FD0rM",
   andnpd_2 =	"rmo:660F55rM",
@@ -1379,11 +1387,14 @@ local function op_data(params)
   if sz == "a" then sz = addrsize end
   for _,p in ipairs(params) do
     local a = parseoperand(p)
-    if sub(a.mode, 1, 1) ~= "i" or a.mode == "iJ" or
-       (a.opsize and a.opsize ~= sz) then
+    if sub(a.mode, 1, 1) ~= "i" or (a.opsize and a.opsize ~= sz) then
       werror("bad mode or size in `"..p.."'")
     end
-    wputszarg(sz, a.imm)
+    if a.mode == "iJ" then
+      wputlabel("IMM_", a.imm, 1)
+    else
+      wputszarg(sz, a.imm)
+    end
   end
 end
 

@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 -- LuaJIT compiler tracing module.
 --
--- Copyright (C) 2005-2006 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
 -- Released under the MIT/X license. See luajit.h for full copyright notice.
 ----------------------------------------------------------------------------
 -- Activate this module to trace the progress of the JIT compiler.
@@ -21,11 +21,11 @@ local PRIORITY = -99
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 10102, "LuaJIT core/library version mismatch")
+assert(jit.version_num == 10103, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local type, tostring, sub, format = type, tostring, string.sub, string.format
 local getinfo, justats = debug.getinfo, jutil.stats
-local stderr = io.stderr
+local stdout, stderr = io.stdout, io.stderr
 
 -- Turn compilation off for the whole module. LuaJIT would do that anyway.
 jit.off(true, true)
@@ -87,7 +87,7 @@ local function traceoff()
   if active then
     active = false
     jit.attach(h_trace)
-    if out then out:close() end
+    if out and out ~= stdout then out:close() end
     out = nil
   end
 end
@@ -96,7 +96,7 @@ end
 local function traceon(filename)
   if active then traceoff() end
   local outfile = filename or os.getenv("LUAJIT_TRACEFILE")
-  out = outfile and assert(io.open(outfile, "w"))
+  out = outfile and (outfile == "-" and stdout or assert(io.open(outfile, "w")))
   jit.attach(h_trace, PRIORITY)
   active = true
 end

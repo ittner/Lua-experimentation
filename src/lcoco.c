@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2004-2006 Mike Pall. All rights reserved.
+** Copyright (C) 2004-2007 Mike Pall. All rights reserved.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining
 ** a copy of this software and associated documentation files (the
@@ -23,7 +23,7 @@
 ** [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-/* Coco -- True C coroutines for Lua. http://luajit.luaforge.net/coco.html */
+/* Coco -- True C coroutines for Lua. http://luajit.org/coco.html */
 #ifndef COCO_DISABLE
 
 #define lcoco_c
@@ -281,6 +281,18 @@ typedef void *coco_ctx[2];  /* ra, sp */
   buf->__jmpbuf->__sp = (stack); \
   buf->__jmpbuf->__fp = (void *)0; \
   stack[4] = (size_t)(a0);
+#endif
+
+#elif defined(__arm__) || defined(__ARM__)
+
+#if __GLIBC__ == 2 || defined(__UCLIBC__)	/* arm-linux-glibc2 */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
+  buf->__jmpbuf[__JMP_BUF_SP+1] = (int)(func); /* pc */ \
+  buf->__jmpbuf[__JMP_BUF_SP] = (int)(stack); /* sp */ \
+  buf->__jmpbuf[__JMP_BUF_SP-1] = 0; /* fp */ \
+  stack[0] = (size_t)(a0);
+#define COCO_STACKADJUST	2
+#define COCO_MAIN_PARAM		int _a, int _b, int _c, int _d, lua_State *L
 #endif
 
 #endif /* arch check */

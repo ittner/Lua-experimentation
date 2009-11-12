@@ -1,6 +1,6 @@
 /*
 ** Interface to JIT engine.
-** Copyright (C) 2005-2006 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define ljit_core_c
@@ -68,7 +68,7 @@ int luaJIT_findpc(Proto *pt, const Instruction *savedpc)
     while (!((size_t)(addr - tr.mcode) < tr.sz)) {
       memcpy((void *)&tr, JIT_MCTRAILER(tr.mcode, tr.sz),
 	     sizeof(jit_MCTrailer));
-      if (tr.mcode == NULL) { jit_assert(0); return -1; }  /* Not in chain. */
+      if (tr.mcode == NULL) return -1;  /* Not in chain. */
     }
     {
       jit_Mfm *mfm = JIT_MCMFM(tr.mcode, tr.sz);

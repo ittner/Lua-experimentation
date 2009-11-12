@@ -1,13 +1,13 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
 <title>Installing LuaJIT</title>
-<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
-<meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
-<meta name="Language" content="en" />
-<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="Author" content="Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2007, Mike Pall">
+<meta name="Language" content="en">
+<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
+<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
 <style type="text/css">
 table.build {
   line-height: 1.2;
@@ -27,7 +27,7 @@ tr.buildhead td {
 </head>
 <body>
 <div id="site">
-<a href="http://luajit.luaforge.net/"><span>Lua<span id="logo">JIT</span></span></a>
+<a href="http://luajit.org/"><span>Lua<span id="logo">JIT</span></span></a>
 </div>
 <div id="head">
 <h1>Installing LuaJIT</h1>
@@ -71,7 +71,7 @@ tr.buildhead td {
 <a href="dynasm_examples.html">Examples</a>
 </li></ul>
 </li><li>
-<a href="http://luajit.luaforge.net/download.html">Download <span class="ext">&raquo;</span></a>
+<a href="http://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
 </li></ul>
 </div>
 <div id="main">
@@ -79,6 +79,10 @@ tr.buildhead td {
 LuaJIT is not much more difficult to install than Lua itself.
 Just unpack the distribution file, change into the newly created
 directory and follow the instructions below.
+</p>
+<p class="indent">
+For the impatient: <b><tt>make&nbsp;linux&nbsp;&amp;&amp;&nbsp;sudo&nbsp;make&nbsp;install</tt></b><br>
+Replace <tt>linux</tt> with e.g. <tt>bsd</tt> or <tt>macosx</tt> depending on your OS.
 </p>
 <p>
 In case you've missed this in <a href="luajit_features.html">Features</a>:
@@ -167,13 +171,21 @@ The Makefiles have a number of targets for various operating systems:
 
 <p>
 You may want to enable interactive line editing for the stand-alone
-executable. There are extra targets for Linux and Mac OS X:
-<tt>make&nbsp;linux_rl</tt> and <tt>make&nbsp;macosx_rl</tt>.
+executable. There are extra targets for Linux, BSD and Mac OS X:
+<tt>make&nbsp;linux_rl</tt>, <tt>make&nbsp;bsd_rl</tt>
+and <tt>make&nbsp;macosx_rl</tt>.
 </p>
 
 <h3>MSVC (Win32)</h3>
 <p>
-To compile LuaJIT with MSVC change to the <tt>src</tt> directory
+First check out <tt>etc\luavs.bat</tt> if it suits your needs. Then try
+running it from the MSVC command prompt (start it from the toplevel directory).
+</p>
+<p>
+Another option is to set up your own MSVC project:
+</p>
+<p>
+Change to the <tt>src</tt> directory
 and create a new DLL project for <tt>lua51.dll</tt>.
 Add all C files to it except for <tt>lua.c</tt>, <tt>luac.c</tt>
 and <tt>print.c</tt>. Add the <tt>..\dynasm</tt> directory
@@ -185,25 +197,23 @@ Add <tt>lua.c</tt> to it and link with the import library
 <tt>lua51.lib</tt> created for <tt>lua51.dll</tt>. Build
 the executable.
 </p>
-<p>
-Alternatively you can try running <tt>etc/luavs.bat</tt>
-from the MSVC command prompt (relative to the <tt>src</tt> directory).
-</p>
 
 <h2>Installation</h2>
 
 <h3>POSIX systems</h3>
 <p>
 Run <tt>make&nbsp;install</tt> from the top-level directory.
-You may need to <tt>su&nbsp;-&nbsp;root</tt> before doing so.
+You probably need to be the root user before doing so, i.e. use
+<tt>sudo&nbsp;make&nbsp;install</tt> or <tt>su&nbsp;-&nbsp;root</tt>
+before the <tt>make&nbsp;install</tt>.
 </p>
 <p>
-By default this installs only:<br />
-<tt>&nbsp;&nbsp;/usr/local/bin/<strong>luajit</strong></tt> &mdash; The stand-alone executable.<br />
-<tt>&nbsp;&nbsp;/usr/local/lib/lua/5.1</tt> &mdash; C module directory.<br />
-<tt>&nbsp;&nbsp;/usr/local/share/lua/5.1</tt> &mdash; Lua module directory.<br />
+By default this installs only:<br>
+<tt>&nbsp;&nbsp;/usr/local/bin/<strong>luajit</strong></tt> &mdash; The stand-alone executable.<br>
+<tt>&nbsp;&nbsp;/usr/local/lib/lua/5.1</tt> &mdash; C module directory.<br>
+<tt>&nbsp;&nbsp;/usr/local/share/lua/5.1</tt> &mdash; Lua module directory.<br>
 <tt>&nbsp;&nbsp;/usr/local/share/lua/5.1/<strong>jit/*.lua</strong></tt> &mdash;
-<tt>jit.*</tt> modules.<br />
+<tt>jit.*</tt> modules.<br>
 </p>
 <p>
 The Lua docs and includes are not installed to avoid overwriting
@@ -219,7 +229,7 @@ distribution (use the <em>same</em> version your copy of LuaJIT
 is based on). This avoids dragging in most of LuaJIT which is not
 needed for the pure bytecode compiler. You can also use the bare-bones
 Lua to bytecode translator <tt>luac.lua</tt> (look in the <tt>test</tt>
-directory of the Lua distribution).
+directory of the original Lua distribution).
 </p>
 
 <h3>Windows</h3>
@@ -263,8 +273,8 @@ if you don't follow these instructions.</li>
 <ul>
 <li>Install the optimizer modules <tt>jit.opt</tt> and
 <tt>jit.opt_inline</tt> relative to the Lua module path
-(you've probably modified it &mdash; see <tt>src/luaconf.h</tt>):<br />
-<tt>jit/opt.lua</tt><br />
+(you've probably modified it &mdash; see <tt>src/luaconf.h</tt>):<br>
+<tt>jit/opt.lua</tt><br>
 <tt>jit/opt_inline.lua</tt></li>
 <li>If you want to ship a single executable then you may want to
 embed the optimizer modules into your application (but don't loose
@@ -280,7 +290,7 @@ time with this during the early development phase). This involves:
 and <tt>package.preload["jit.opt_inline"]</tt>.</li>
 </ul></li>
 <li>Activate the LuaJIT optimizer from Lua code to be run at startup:
-<tt>&nbsp;&nbsp;require("jit.opt").start()</tt><br />
+<tt>&nbsp;&nbsp;require("jit.opt").start()</tt><br>
 Or use equivalent C code. See <tt>dojitopt()</tt> in <tt>src/lua.c</tt>.</li>
 </ul></li>
 <li>All other LuaJIT specific modules (<tt>jit.*</tt>) are for debugging only.
@@ -302,8 +312,8 @@ Although the very liberal LuaJIT
 <a href="http://www.opensource.org/licenses/mit-license.php"><span class="ext">&raquo;</span>&nbsp;license</a>
 does not require any acknowledgment whatsoever, it would be appreciated
 if you give some credit in the docs (or the "About" box) of your application.
-A simple line like:<br />
-<tt>&nbsp;&nbsp;This product includes LuaJIT, http://luajit.luaforge.net/</tt><br />
+A simple line like:<br>
+<tt>&nbsp;&nbsp;This product includes LuaJIT, http://luajit.org/</tt><br>
 would be nice. Please do not include any E-Mail addresses. Thank you!
 </p>
 <p>
@@ -313,11 +323,11 @@ or better yet write a few lines about your project to the
 <a href="http://www.lua.org/lua-l.html"><span class="ext">&raquo;</span>&nbsp;Lua mailing list</a>.
 Thank you!
 </p>
-<br class="flush" />
+<br class="flush">
 </div>
 <div id="foot">
-<hr class="hide" />
-Copyright &copy; 2005-2006 Mike Pall
+<hr class="hide">
+Copyright &copy; 2005-2007 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

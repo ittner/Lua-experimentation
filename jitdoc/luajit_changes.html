@@ -1,17 +1,17 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
 <title>LuaJIT Change History</title>
-<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
-<meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
-<meta name="Language" content="en" />
-<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="Author" content="Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2007, Mike Pall">
+<meta name="Language" content="en">
+<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
+<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
 </head>
 <body>
 <div id="site">
-<a href="http://luajit.luaforge.net/"><span>Lua<span id="logo">JIT</span></span></a>
+<a href="http://luajit.org/"><span>Lua<span id="logo">JIT</span></span></a>
 </div>
 <div id="head">
 <h1>LuaJIT Change History</h1>
@@ -55,19 +55,32 @@
 <a href="dynasm_examples.html">Examples</a>
 </li></ul>
 </li><li>
-<a href="http://luajit.luaforge.net/download.html">Download <span class="ext">&raquo;</span></a>
+<a href="http://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
 </li></ul>
 </div>
 <div id="main">
 <p>
 This is a list of changes between the released versions of LuaJIT.
-The current version is <strong>LuaJIT&nbsp;1.1.2</strong>.
+The current version is <strong>LuaJIT&nbsp;1.1.3</strong>.
 </p>
 <p>
 Please check the
-<a href="http://luajit.luaforge.net/luajit_changes.html"><span class="ext">&raquo;</span>&nbsp;Online Change History</a>
+<a href="http://luajit.org/luajit_changes.html"><span class="ext">&raquo;</span>&nbsp;Online Change History</a>
 to see whether newer versions are available.
 </p>
+
+<h2 id="LuaJIT-1.1.3">LuaJIT 1.1.3 &mdash; 2007-05-24</h2>
+<ul>
+<li>Merged with Lua 5.1.2. Fixes all
+<a href="http://www.lua.org/bugs.html#5.1.1"><span class="ext">&raquo;</span>&nbsp;known bugs in Lua 5.1.1</a>.</li>
+<li>Merged pending Lua 5.1.x fixes: "return -nil" bug, spurious count hook call.</li>
+<li>Remove a (sometimes) wrong assertion in <tt>luaJIT_findpc()</tt>.</li>
+<li>DynASM now allows labels for displacements and <tt>.aword</tt>.</li>
+<li>Fix some compiler warnings for DynASM glue (internal API change).</li>
+<li>Correct naming for SSSE3 (temporarily known as SSE4) in DynASM and x86 disassembler.</li>
+<li>The loadable debug modules now handle redirection to stdout
+(e.g. <tt>-j&nbsp;trace=-</tt>).</li>
+</ul>
 
 <h2 id="LuaJIT-1.1.2">LuaJIT 1.1.2 &mdash; 2006-06-24</h2>
 <ul>
@@ -176,12 +189,12 @@ and <tt>jit.arch</tt>.</li>
 <li>The <tt>-j dump</tt> output now shows JSUB names, too.</li>
 <li>New x86 disassembler module written in pure Lua. No dependency
 on ndisasm anymore. Flexible API, very compact (500 lines)
-and complete (x87, MMX, SSE, SSE2, SSE3, SSE4, privileged instructions).</li>
+and complete (x87, MMX, SSE, SSE2, SSE3, SSSE3, privileged instructions).</li>
 <li><tt>luajit -v</tt> prints the LuaJIT version and copyright
 on a separate line.</li>
 </ul></li>
 
-<li>Added SSE, SSE2, SSE3 and SSE4 support to DynASM.</li>
+<li>Added SSE, SSE2, SSE3 and SSSE3 support to DynASM.</li>
 <li>Miscellaneous doc changes. Added a section about
 <a href="luajit_install.html#embedding">embedding LuaJIT</a>.</li>
 </ul>
@@ -204,7 +217,7 @@ This is the first public release of LuaJIT.
 
 <h2 id="LuaJIT-1.0.2">LuaJIT 1.0.2 &mdash; 2005-09-02</h2>
 <ul>
-<li>Add support for flushing the Valgrind translation cache <br />
+<li>Add support for flushing the Valgrind translation cache <br>
 (<tt>MYCFLAGS= -DUSE_VALGRIND</tt>).</li>
 <li>Add support for freeing executable mcode memory to the <tt>mmap()</tt>-based
 variant for POSIX systems.</li>
@@ -243,11 +256,11 @@ Special thanks to Adam D. Moss for reporting most of the bugs.
 <p>
 This is the initial non-public release of LuaJIT.
 </p>
-<br class="flush" />
+<br class="flush">
 </div>
 <div id="foot">
-<hr class="hide" />
-Copyright &copy; 2005-2006 Mike Pall
+<hr class="hide">
+Copyright &copy; 2005-2007 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

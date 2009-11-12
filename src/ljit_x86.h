@@ -1,17 +1,17 @@
 /*
 ** This file has been pre-processed with DynASM.
-** http://luajit.luaforge.net/dynasm.html
-** DynASM version 1.1.1, DynASM x86 version 1.1.1
+** http://luajit.org/dynasm.html
+** DynASM version 1.1.3, DynASM x86 version 1.1.3
 ** DO NOT EDIT! The original file is in "ljit_x86.dasc".
 */
 
-#if DASM_VERSION != 10101
+#if DASM_VERSION != 10103
 #error "Version mismatch between DynASM and included encoding engine"
 #endif
 
 /*
 ** Bytecode to machine code translation for x86 CPUs.
-** Copyright (C) 2005-2006 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define DASM_SECTION_CODE	0
@@ -565,7 +565,7 @@ static void jit_checkGC(jit_State *J)
 
 /*
 ** Function inlining support for x86 CPUs.
-** Copyright (C) 2005-2006 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* ------------------------------------------------------------------------ */

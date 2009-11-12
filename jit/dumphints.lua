@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 -- LuaJIT hints dumper module.
 --
--- Copyright (C) 2005-2006 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
 -- Released under the MIT/X license. See luajit.h for full copyright notice.
 ----------------------------------------------------------------------------
 -- Activate this module to dump the bytecode and the hints from
@@ -23,12 +23,12 @@ local PRIORITY = 10
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 10102, "LuaJIT core/library version mismatch")
+assert(jit.version_num == 10103, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local type, pairs, format = type, pairs, string.format
 local bytecode, const = jutil.bytecode, jutil.const
 local hints, fhints = jutil.hints, jutil.fhints
-local stderr = io.stderr
+local stdout, stderr = io.stdout, io.stderr
 
 -- Turn compilation off for the whole module. LuaJIT would do that anyway.
 jit.off(true, true)
@@ -203,7 +203,7 @@ local function h_dumphints(st)
   if not ok then
     stderr:write("\nERROR: jit.dumphints disabled: ", err, "\n")
     jit.attach(h_dumphints) -- Better turn ourselves off after a failure.
-    if out then out:close() end
+    if out and out ~= stdout then out:close() end
     out = nil
     active = nil
   end
@@ -214,7 +214,7 @@ local function dumphintsoff()
   if active then
     active = false
     jit.attach(h_dumphints)
-    if out then out:close() end
+    if out and out ~= stdout then out:close() end
     out = nil
   end
 end
@@ -223,7 +223,7 @@ end
 local function dumphintson(filename)
   if active then dumphintsoff() end
   local outfile = filename or os.getenv("LUAJIT_DUMPHINTSFILE")
-  out = outfile and assert(io.open(outfile, "w"))
+  out = outfile and (outfile == "-" and stdout or assert(io.open(outfile, "w")))
   jit.attach(h_dumphints, PRIORITY)
   active = true
 end

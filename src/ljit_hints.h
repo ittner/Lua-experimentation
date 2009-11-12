@@ -1,6 +1,6 @@
 /*
 ** Hints for the JIT compiler backend.
-** Copyright (C) 2005-2006 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2007 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifdef STRING_HINTS

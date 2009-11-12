@@ -1,6 +1,6 @@
 /*
 ** DynASM x86 encoding engine.
-** Copyright (C) 2005-2006 Mike Pall. All rights reserved.
+** Copyright (C) 2005-2007 Mike Pall. All rights reserved.
 ** Released under the MIT/X license. See dynasm.lua for full copyright notice.
 */
 
@@ -77,7 +77,7 @@ void dasm_init(Dst_DECL, int maxsection)
   size_t psz = 0;
   int i;
   Dst_REF = NULL;
-  dasm_m_grow(Dst, (void **)&Dst_REF, &psz, DASM_PSZ(maxsection));
+  DASM_M_GROW(Dst, struct dasm_State, Dst_REF, psz, DASM_PSZ(maxsection));
   D = Dst_REF;
   D->psize = psz;
   D->lglabels = NULL;
@@ -101,10 +101,10 @@ void dasm_free(Dst_DECL)
   int i;
   for (i = 0; i < D->maxsection; i++)
     if (D->sections[i].buf)
-      dasm_m_free(Dst, D->sections[i].buf, D->sections[i].bsize);
-  if (D->pclabels) dasm_m_free(Dst, D->pclabels, D->pcsize);
-  if (D->lglabels) dasm_m_free(Dst, D->lglabels, D->lgsize);
-  dasm_m_free(Dst, D, D->psize);
+      DASM_M_FREE(Dst, D->sections[i].buf, D->sections[i].bsize);
+  if (D->pclabels) DASM_M_FREE(Dst, D->pclabels, D->pcsize);
+  if (D->lglabels) DASM_M_FREE(Dst, D->lglabels, D->lgsize);
+  DASM_M_FREE(Dst, D, D->psize);
 }
 
 /* Setup global label array. Must be called before dasm_setup(). */
@@ -112,7 +112,7 @@ void dasm_setupglobal(Dst_DECL, void **gl, unsigned int maxgl)
 {
   dasm_State *D = Dst_REF;
   D->globals = gl - 10;  /* Negative bias to compensate for locals. */
-  dasm_m_grow(Dst, (void **)&D->lglabels, &D->lgsize, (10+maxgl)*sizeof(int));
+  DASM_M_GROW(Dst, int, D->lglabels, D->lgsize, (10+maxgl)*sizeof(int));
 }
 
 /* Grow PC label array. Can be called after dasm_setup(), too. */
@@ -120,7 +120,7 @@ void dasm_growpc(Dst_DECL, unsigned int maxpc)
 {
   dasm_State *D = Dst_REF;
   size_t osz = D->pcsize;
-  dasm_m_grow(Dst, (void **)&D->pclabels, &D->pcsize, maxpc*sizeof(int));
+  DASM_M_GROW(Dst, int, D->pclabels, D->pcsize, maxpc*sizeof(int));
   memset((void *)(((unsigned char *)D->pclabels)+osz), 0, D->pcsize-osz);
 }
 
@@ -164,7 +164,7 @@ void dasm_put(Dst_DECL, int start, ...)
   int *b;
 
   if (pos >= sec->epos) {
-    dasm_m_grow(Dst, (void **)&sec->buf, &sec->bsize,
+    DASM_M_GROW(Dst, int, sec->buf, sec->bsize,
       sec->bsize + 2*DASM_MAXSECPOS*sizeof(int));
     sec->rbuf = sec->buf - DASM_POS2BIAS(pos);
     sec->epos = sec->bsize/sizeof(int) - DASM_MAXSECPOS + DASM_POS2BIAS(pos);

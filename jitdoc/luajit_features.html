@@ -1,17 +1,17 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
 <title>LuaJIT Features</title>
-<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
-<meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
-<meta name="Language" content="en" />
-<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="Author" content="Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2007, Mike Pall">
+<meta name="Language" content="en">
+<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
+<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
 </head>
 <body>
 <div id="site">
-<a href="http://luajit.luaforge.net/"><span>Lua<span id="logo">JIT</span></span></a>
+<a href="http://luajit.org/"><span>Lua<span id="logo">JIT</span></span></a>
 </div>
 <div id="head">
 <h1>LuaJIT Features</h1>
@@ -55,7 +55,7 @@
 <a href="dynasm_examples.html">Examples</a>
 </li></ul>
 </li><li>
-<a href="http://luajit.luaforge.net/download.html">Download <span class="ext">&raquo;</span></a>
+<a href="http://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
 </li></ul>
 </div>
 <div id="main">
@@ -145,7 +145,7 @@ It supports all standard language semantics. In particular:
 <li>All standard types, operators and metamethods are supported.</li>
 <li>Implicit type coercions (number/string) work as expected.</li>
 <li>Full IEEE-754 semantics for floating point arithmetics
-(NaN, Inf, +-0, ...).</li>
+(NaN, +-Inf, +-0, ...).</li>
 <li>Full support for lexical closures.
 Proper tail calls do not consume a call frame.</li>
 <li>Exceptions are precise. Backtraces work fine.</li>
@@ -191,7 +191,7 @@ Have a look at <a href="luajit_debug.html">Debugging LuaJIT</a>, too.</li>
 <ul>
 <li>LuaJIT allocates executable memory for the generated machine code
 if your OS has support for it: either <tt>HeapCreate()</tt> for Windows or
-<tt>mmap()</tt> on POSIX systems.<br />
+<tt>mmap()</tt> on POSIX systems.<br>
 The fallback is the standard Lua allocator (i.e. malloc()).
 But this usually means the allocated memory is not marked executable.
 Running compiled code will trap on CPUs/OS with the NX (No eXecute)
@@ -199,7 +199,7 @@ extension <em>if you can only use the fallback</em>.</li>
 <li><a href="dynasm.html">DynASM</a> is needed to regenerate the
 <tt>ljit_x86.h</tt> file. But only in case you want to <em>modify</em>
 the <tt>*.dasc</tt>/<tt>*.dash</tt> files. A pre-processed <tt>*.h</tt>
-file is supplied with LuaJIT.<br />
+file is supplied with LuaJIT.<br>
 DynASM is written in Lua and needs a plain copy of Lua 5.1
 (installed as <tt>lua</tt>). Or you can run it with LuaJIT built from
 the <tt>*.h</tt> file supplied with the distribution (modify
@@ -249,11 +249,11 @@ shortcuts for recursive functions, inlining of small Lua functions.</li>
 is very simplistic (yet effective). An MFP algorithm could improve
 the precision of the analysis. Whether this pays off is unclear.</li>
 </ul>
-<br class="flush" />
+<br class="flush">
 </div>
 <div id="foot">
-<hr class="hide" />
-Copyright &copy; 2005-2006 Mike Pall
+<hr class="hide">
+Copyright &copy; 2005-2007 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

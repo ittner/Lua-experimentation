@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 -- LuaJIT x86 disassembler module.
 --
--- Copyright (C) 2005-2006 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2007 Mike Pall. All rights reserved.
 -- Released under the MIT/X license. See luajit.h for full copyright notice.
 ----------------------------------------------------------------------------
 -- This is a helper module used by the LuaJIT machine code dumper module.
@@ -14,7 +14,7 @@
 -- been developed independently by looking at the opcode tables from the
 -- Intel and AMD manuals. The supported instruction set is quite extensive
 -- and reflects what a current generation P4 or K8 implements in 32 bit
--- mode. Yes, this includes MMX, SSE, SSE2, SSE3, SSE4 and even privileged
+-- mode. Yes, this includes MMX, SSE, SSE2, SSE3, SSSE3 and even privileged
 -- instructions.
 --
 -- Notes:
@@ -123,7 +123,7 @@ local map_opc2 = {
 "comissXrm||comisdXrm",
 --3x
 "wrmsr","rdtsc","rdmsr","rdpmc","sysenter","sysexit",nil,nil,
-"sse4*38",nil,"sse4*3a",nil,nil,nil,nil,nil,
+"ssse3*38",nil,"ssse3*3a",nil,nil,nil,nil,nil,
 --4x
 "cmovoVrm","cmovnoVrm","cmovbVrm","cmovnbVrm",
 "cmovzVrm","cmovnzVrm","cmovbeVrm","cmovaVrm",
@@ -191,8 +191,8 @@ nil,"ud2","bt!Vmu","btcVmr",
 }
 assert(map_opc2[255] == "ud")
 
--- Map for SSE4 opcodes.
-local map_sse4 = {
+-- Map for SSSE3 opcodes.
+local map_ssse3 = {
 ["38"] = { -- [66] 0f 38 xx
 --0x
 [0]="pshufbPrm","phaddwPrm","phadddPrm","phaddswPrm",
@@ -555,9 +555,9 @@ map_act = {
     return opcdispatch(ctx, map_opc2)
   end,
 
-  -- SSE4 dispatch.
-  sse4 = function(ctx, name, pat)
-    return opcdispatch(ctx, map_sse4[pat])
+  -- SSSE3 dispatch.
+  ssse3 = function(ctx, name, pat)
+    return opcdispatch(ctx, map_ssse3[pat])
   end,
 
   -- Floating point opcode dispatch.

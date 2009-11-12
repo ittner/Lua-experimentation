@@ -9,7 +9,8 @@ PLAT= none
 
 # Where to install. The installation starts in the src directory, so take care
 # if INSTALL_TOP is not an absolute path. (Man pages are installed from the
-# doc directory.)
+# doc directory.) You may want to make these paths consistent with LUA_ROOT,
+# LUA_LDIR, and LUA_CDIR in luaconf.h (and also with etc/luajit.pc).
 #
 INSTALL_TOP= /usr/local
 INSTALL_BIN= $(INSTALL_TOP)/bin
@@ -37,7 +38,7 @@ RANLIB= ranlib
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
 # Convenience platforms targets.
-PLATS= linux bsd macosx solaris mingw cygwin posix generic linux_rl macosx_rl
+PLATS= linux bsd macosx solaris mingw cygwin posix generic linux_rl bsd_rl macosx_rl
 
 # What to install.
 TO_BIN= luajit
@@ -47,9 +48,9 @@ TO_BIN= luajit
 
 # Lua version and release.
 V= 5.1
-R= 5.1.1
+R= 5.1.2
 # LuaJIT version.
-JV= 1.1.2
+JV= 1.1.3
 
 all:	$(PLAT)
 
@@ -122,6 +123,6 @@ lecho:
 	@echo "-- EOF"
 
 # list targets that do not create files (but not all makes understand .PHONY)
-.PHONY: all $(PLATS) clean test install local none dummy echo pecho lecho newer
+.PHONY: all $(PLATS) clean test install local none dummy echo pecho lecho
 
 # (end of Makefile)

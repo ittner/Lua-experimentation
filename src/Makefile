@@ -32,7 +32,7 @@ COCOCFLAGS=
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-PLATS= linux bsd macosx solaris mingw cygwin posix generic    linux_rl macosx_rl
+PLATS= linux bsd macosx solaris mingw cygwin posix generic linux_rl bsd_rl macosx_rl
 
 # ++ Coco =========
 COCO_O= lcoco.o
@@ -123,10 +123,14 @@ echo:
 # convenience targets for popular platforms
 
 none:
-	@echo "Please choose a platform: $(PLATS)"
+	@echo "Please choose a platform:"
+	@echo "  $(PLATS)"
 
 bsd:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-Wl,-E"
+
+bsd_rl:
+	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN -DLUA_USE_READLINE" MYLIBS="-Wl,-E -lreadline"
 
 generic:
 	$(MAKE) all MYCFLAGS=
@@ -209,8 +213,7 @@ llex.o: llex.c lua.h luaconf.h ldo.h lobject.h llimits.h lstate.h ltm.h \
 lmathlib.o: lmathlib.c lua.h luaconf.h lauxlib.h lualib.h
 lmem.o: lmem.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h \
   ltm.h lzio.h lmem.h lcoco.h ldo.h
-loadlib.o: loadlib.c lauxlib.h lua.h luaconf.h lobject.h llimits.h \
-  lualib.h luajit.h
+loadlib.o: loadlib.c lua.h luaconf.h lauxlib.h lualib.h luajit.h
 lobject.o: lobject.c lua.h luaconf.h ldo.h lobject.h llimits.h lstate.h \
   ltm.h lzio.h lmem.h lcoco.h lstring.h lgc.h lvm.h
 lopcodes.o: lopcodes.c lopcodes.h llimits.h lua.h luaconf.h

@@ -1,17 +1,17 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
 <title>Debugging LuaJIT</title>
-<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
-<meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
-<meta name="Language" content="en" />
-<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="Author" content="Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2007, Mike Pall">
+<meta name="Language" content="en">
+<link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
+<link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
 </head>
 <body>
 <div id="site">
-<a href="http://luajit.luaforge.net/"><span>Lua<span id="logo">JIT</span></span></a>
+<a href="http://luajit.org/"><span>Lua<span id="logo">JIT</span></span></a>
 </div>
 <div id="head">
 <h1>Debugging LuaJIT</h1>
@@ -55,7 +55,7 @@
 <a href="dynasm_examples.html">Examples</a>
 </li></ul>
 </li><li>
-<a href="http://luajit.luaforge.net/download.html">Download <span class="ext">&raquo;</span></a>
+<a href="http://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
 </li></ul>
 </div>
 <div id="main">
@@ -108,7 +108,7 @@ by finding the bug. Thank you!
 <h2>Get the Latest Version</h2>
 <p>
 Number one on your list of things to check is the
-<a href="http://luajit.luaforge.net/luajit_changes.html"><span class="ext">&raquo;</span>&nbsp;Online Change History</a>.
+<a href="http://luajit.org/luajit_changes.html"><span class="ext">&raquo;</span>&nbsp;Online Change History</a>.
 </p>
 <p>
 Please check if a newer version is available. Maybe the bug
@@ -122,14 +122,14 @@ First try to make the bug reproducible. Try to isolate the module
 and the function the bug occurs in:
 </p>
 <p>
-Either selectively turn off compilation for some modules with<br />
-<tt>&nbsp;&nbsp;jit.off(true, true)</tt><br />
+Either selectively turn off compilation for some modules with<br>
+<tt>&nbsp;&nbsp;jit.off(true, true)</tt><br>
 until the bug disappears ...
 </p>
 <p>
 And/or turn the whole JIT engine off and selectively compile
-functions with<br />
-<tt>&nbsp;&nbsp;jit.compile(func)</tt><br />
+functions with<br>
+<tt>&nbsp;&nbsp;jit.compile(func)</tt><br>
 until it reappears.
 </p>
 <p>
@@ -188,13 +188,13 @@ displayed in your debugger (this is really hard to solve).
 <p>
 Another way to debug LuaJIT is to turn on assertions.
 They can be turned on only for the JIT engine by adding
-<tt>-DLUAJIT_ASSERT</tt> to <tt>ITCFLAGS</tt> in <tt>src/Makefile</tt>.
+<tt>-DLUAJIT_ASSERT</tt> to <tt>JITCFLAGS</tt> in <tt>src/Makefile</tt>.
 Then recompile with <tt>make&nbsp;clean</tt> and <tt>make</tt>.
 </p>
 <p>
-Add these two lines to <tt>src/luaconf.h</tt> to turn on all assertions in the Lua core:<br />
-<tt>&nbsp;&nbsp;#include &lt;assert.h&gt;</tt><br />
-<tt>&nbsp;&nbsp;#define lua_assert(x) assert(x)</tt><br />
+Add these two lines to <tt>src/luaconf.h</tt> to turn on all assertions in the Lua core:<br>
+<tt>&nbsp;&nbsp;#include &lt;assert.h&gt;</tt><br>
+<tt>&nbsp;&nbsp;#define lua_assert(x) assert(x)</tt><br>
 This turns on the JIT engine assertions, too.
 Recompile and see whether any assertions trigger.
 Don't forget to turn off the (slow) assertions when you're done!
@@ -259,11 +259,11 @@ Finally I have to say a <strong>BIG THANK YOU</strong>
 to everyone who has helped to make LuaJIT better by finding
 and fixing bugs!
 </p>
-<br class="flush" />
+<br class="flush">
 </div>
 <div id="foot">
-<hr class="hide" />
-Copyright &copy; 2005-2006 Mike Pall
+<hr class="hide">
+Copyright &copy; 2005-2007 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

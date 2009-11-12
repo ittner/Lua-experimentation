@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2006 Mike Pall. All rights reserved.
+** Copyright (C) 2005-2007 Mike Pall. All rights reserved.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining
 ** a copy of this software and associated documentation files (the
@@ -23,7 +23,7 @@
 ** [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-/* LuaJIT -- a Just-In-Time Compiler for Lua. http://luajit.luaforge.net/ */
+/* LuaJIT -- a Just-In-Time Compiler for Lua. http://luajit.org/ */
 
 /* LuaJIT public C API. */
 #ifndef luajit_h
@@ -32,11 +32,11 @@
 #include "lua.h"
 
 
-#define LUAJIT_VERSION		"LuaJIT 1.1.2"
-#define LUAJIT_VERSION_NUM	10102  /* Version 1.1.2 = 01.01.02. */
-#define LUAJIT_VERSION_SYM	luaJIT_version_1_1_2
-#define LUAJIT_COPYRIGHT	"Copyright (C) 2005-2006 Mike Pall"
-#define LUAJIT_URL		"http://luajit.luaforge.net/"
+#define LUAJIT_VERSION		"LuaJIT 1.1.3"
+#define LUAJIT_VERSION_NUM	10103  /* Version 1.1.3 = 01.01.03. */
+#define LUAJIT_VERSION_SYM	luaJIT_version_1_1_3
+#define LUAJIT_COPYRIGHT	"Copyright (C) 2005-2007 Mike Pall"
+#define LUAJIT_URL		"http://luajit.org/"
 
 /* Modes for luaJIT_setmode. */
 #define LUAJIT_MODE_MASK	0x00ff
