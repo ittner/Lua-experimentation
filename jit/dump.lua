@@ -26,7 +26,7 @@ local PRIORITY = -98
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 10104, "LuaJIT core/library version mismatch")
+assert(jit.version_num == 10105, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local type, format, gsub = type, string.format, string.gsub
 local bytecode, const = jutil.bytecode, jutil.const

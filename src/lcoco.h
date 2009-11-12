@@ -6,8 +6,8 @@
 #ifndef lcoco_h
 #define lcoco_h
 
-#define LUACOCO_VERSION		"Coco 1.1.4"
-#define LUACOCO_VERSION_NUM	10104
+#define LUACOCO_VERSION		"Coco 1.1.5"
+#define LUACOCO_VERSION_NUM	10105
 
 /* Exported C API to add a C stack to a coroutine. */
 LUA_API lua_State *lua_newcthread(lua_State *L, int cstacksize);
