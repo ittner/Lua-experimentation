@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.67 2005/08/26 17:36:32 roberto Exp $
+** $Id: liolib.c,v 2.72 2006/01/28 12:59:13 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -28,6 +28,7 @@ static const char *const fnames[] = {"input", "output"};
 
 
 static int pushresult (lua_State *L, int i, const char *filename) {
+  int en = errno;  /* calls to Lua API may change this value */
   if (i) {
     lua_pushboolean(L, 1);
     return 1;
@@ -35,10 +36,10 @@ static int pushresult (lua_State *L, int i, const char *filename) {
   else {
     lua_pushnil(L);
     if (filename)
-      lua_pushfstring(L, "%s: %s", filename, strerror(errno));
+      lua_pushfstring(L, "%s: %s", filename, strerror(en));
     else
-      lua_pushfstring(L, "%s", strerror(errno));
-    lua_pushinteger(L, errno);
+      lua_pushfstring(L, "%s", strerror(en));
+    lua_pushinteger(L, en);
     return 3;
   }
 }
@@ -282,7 +283,7 @@ static int read_line (lua_State *L, FILE *f) {
       return (lua_strlen(L, -1) > 0);  /* check whether read something */
     }
     l = strlen(p);
-    if (p[l-1] != '\n')
+    if (l == 0 || p[l-1] != '\n')
       luaL_addsize(&b, l);
     else {
       luaL_addsize(&b, l - 1);  /* do not include `eol' */
@@ -424,7 +425,7 @@ static int f_seek (lua_State *L) {
   static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = tofile(L);
   int op = luaL_checkoption(L, 2, "cur", modenames);
-  lua_Integer offset = luaL_optinteger(L, 3, 0);
+  long offset = luaL_optlong(L, 3, 0);
   op = fseek(f, offset, mode[op]);
   if (op)
     return pushresult(L, 0, NULL);  /* error */
@@ -440,7 +441,7 @@ static int f_setvbuf (lua_State *L) {
   static const char *const modenames[] = {"no", "full", "line", NULL};
   FILE *f = tofile(L);
   int op = luaL_checkoption(L, 2, NULL, modenames);
-  lua_Integer sz = luaL_optinteger(L, 3, BUFSIZ);
+  lua_Integer sz = luaL_optinteger(L, 3, LUAL_BUFFERSIZE);
   int res = setvbuf(f, NULL, mode[op], sz);
   return pushresult(L, res == 0, NULL);
 }
@@ -507,8 +508,8 @@ static void createstdfile (lua_State *L, FILE *f, int k, const char *fname) {
 
 LUALIB_API int luaopen_io (lua_State *L) {
   createmeta(L);
-  /* create new (private) environment */
-  lua_newtable(L);
+  /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
+  lua_createtable(L, 2, 1);
   lua_replace(L, LUA_ENVIRONINDEX);
   /* open library */
   luaL_register(L, LUA_IOLIBNAME, iolib);
@@ -518,7 +519,7 @@ LUALIB_API int luaopen_io (lua_State *L) {
   createstdfile(L, stderr, 0, "stderr");
   /* create environment for 'popen' */
   lua_getfield(L, -1, "popen");
-  lua_newtable(L);
+  lua_createtable(L, 0, 1);
   lua_pushcfunction(L, io_pclose);
   lua_setfield(L, -2, "__close");
   lua_setfenv(L, -2);

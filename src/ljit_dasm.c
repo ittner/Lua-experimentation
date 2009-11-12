@@ -1,6 +1,6 @@
 /*
 ** Wrapper for architecture-specific DynASM encoder.
-** Copyright (C) 2005 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2006 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define ljit_dasm_c
@@ -18,7 +18,7 @@
 static void dasm_m_grow(Dst_DECL, void **pp, size_t *szp, int need)
 {
   size_t sz = *szp;
-  if (sz > need) return;
+  if (sz >= need) return;
   if (sz < 16) sz = 16;
   while (sz < need) sz += sz;
   *pp = luaM_realloc_(J->L, *pp, *szp, sz);

@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.12 2005/08/26 17:36:32 roberto Exp $
+** $Id: loslib.c,v 1.17 2006/01/27 13:54:31 roberto Exp $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 
 
 static int os_pushresult (lua_State *L, int i, const char *filename) {
+  int en = errno;  /* calls to Lua API may change this value */
   if (i) {
     lua_pushboolean(L, 1);
     return 1;
@@ -28,35 +29,35 @@ static int os_pushresult (lua_State *L, int i, const char *filename) {
   else {
     lua_pushnil(L);
     if (filename)
-      lua_pushfstring(L, "%s: %s", filename, strerror(errno));
+      lua_pushfstring(L, "%s: %s", filename, strerror(en));
     else
-      lua_pushfstring(L, "%s", strerror(errno));
-    lua_pushinteger(L, errno);
+      lua_pushfstring(L, "%s", strerror(en));
+    lua_pushinteger(L, en);
     return 3;
   }
 }
 
 
-static int io_execute (lua_State *L) {
+static int os_execute (lua_State *L) {
   lua_pushinteger(L, system(luaL_optstring(L, 1, NULL)));
   return 1;
 }
 
 
-static int io_remove (lua_State *L) {
+static int os_remove (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   return os_pushresult(L, remove(filename) == 0, filename);
 }
 
 
-static int io_rename (lua_State *L) {
+static int os_rename (lua_State *L) {
   const char *fromname = luaL_checkstring(L, 1);
   const char *toname = luaL_checkstring(L, 2);
   return os_pushresult(L, rename(fromname, toname) == 0, fromname);
 }
 
 
-static int io_tmpname (lua_State *L) {
+static int os_tmpname (lua_State *L) {
   char buff[LUA_TMPNAMBUFSIZE];
   int err;
   lua_tmpnam(buff, err);
@@ -67,13 +68,13 @@ static int io_tmpname (lua_State *L) {
 }
 
 
-static int io_getenv (lua_State *L) {
+static int os_getenv (lua_State *L) {
   lua_pushstring(L, getenv(luaL_checkstring(L, 1)));  /* if NULL push nil */
   return 1;
 }
 
 
-static int io_clock (lua_State *L) {
+static int os_clock (lua_State *L) {
   lua_pushnumber(L, ((lua_Number)clock())/(lua_Number)CLOCKS_PER_SEC);
   return 1;
 }
@@ -93,6 +94,8 @@ static void setfield (lua_State *L, const char *key, int value) {
 }
 
 static void setboolfield (lua_State *L, const char *key, int value) {
+  if (value < 0)  /* undefined? */
+    return;  /* does not set field */
   lua_pushboolean(L, value);
   lua_setfield(L, -2, key);
 }
@@ -121,10 +124,10 @@ static int getfield (lua_State *L, const char *key, int d) {
 }
 
 
-static int io_date (lua_State *L) {
+static int os_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
-  lua_Number n = luaL_optnumber(L, 2, -1);
-  time_t t = (n == -1) ? time(NULL) : (time_t)n;
+  time_t t = lua_isnoneornil(L, 2) ? time(NULL) :
+                                     (time_t)luaL_checknumber(L, 2);
   struct tm *stm;
   if (*s == '!') {  /* UTC? */
     stm = gmtime(&t);
@@ -157,7 +160,7 @@ static int io_date (lua_State *L) {
 }
 
 
-static int io_time (lua_State *L) {
+static int os_time (lua_State *L) {
   time_t t;
   if (lua_isnoneornil(L, 1))  /* called without args? */
     t = time(NULL);  /* get current time */
@@ -177,12 +180,12 @@ static int io_time (lua_State *L) {
   if (t == (time_t)(-1))
     lua_pushnil(L);
   else
-    lua_pushnumber(L, t);
+    lua_pushnumber(L, (lua_Number)t);
   return 1;
 }
 
 
-static int io_difftime (lua_State *L) {
+static int os_difftime (lua_State *L) {
   lua_pushnumber(L, difftime((time_t)(luaL_checknumber(L, 1)),
                              (time_t)(luaL_optnumber(L, 2, 0))));
   return 1;
@@ -191,7 +194,7 @@ static int io_difftime (lua_State *L) {
 /* }====================================================== */
 
 
-static int io_setloc (lua_State *L) {
+static int os_setlocale (lua_State *L) {
   static const int cat[] = {LC_ALL, LC_COLLATE, LC_CTYPE, LC_MONETARY,
                       LC_NUMERIC, LC_TIME};
   static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
@@ -204,23 +207,23 @@ static int io_setloc (lua_State *L) {
 }
 
 
-static int io_exit (lua_State *L) {
+static int os_exit (lua_State *L) {
   exit(luaL_optint(L, 1, EXIT_SUCCESS));
   return 0;  /* to avoid warnings */
 }
 
 static const luaL_Reg syslib[] = {
-  {"clock",     io_clock},
-  {"date",      io_date},
-  {"difftime",  io_difftime},
-  {"execute",   io_execute},
-  {"exit",      io_exit},
-  {"getenv",    io_getenv},
-  {"remove",    io_remove},
-  {"rename",    io_rename},
-  {"setlocale", io_setloc},
-  {"time",      io_time},
-  {"tmpname",   io_tmpname},
+  {"clock",     os_clock},
+  {"date",      os_date},
+  {"difftime",  os_difftime},
+  {"execute",   os_execute},
+  {"exit",      os_exit},
+  {"getenv",    os_getenv},
+  {"remove",    os_remove},
+  {"rename",    os_rename},
+  {"setlocale", os_setlocale},
+  {"time",      os_time},
+  {"tmpname",   os_tmpname},
   {NULL, NULL}
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.85 2005/09/06 17:19:51 roberto Exp $
+** $Id: lauxlib.h,v 1.87 2005/12/29 15:32:11 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ LUALIB_API const char *(luaL_gsub) (lua_State *L, const char *s, const char *p,
                                                   const char *r);
 
 LUALIB_API const char *(luaL_findtable) (lua_State *L, int idx,
-                                         const char *fname);
+                                         const char *fname, int szhint);
 
 
 
@@ -114,6 +114,7 @@ LUALIB_API const char *(luaL_findtable) (lua_State *L, int idx,
 
 #define luaL_getmetatable(L,n)	(lua_getfield(L, LUA_REGISTRYINDEX, (n)))
 
+#define luaL_opt(L,f,n,d)	(lua_isnoneornil(L,(n)) ? (d) : f(L,(n)))
 
 /*
 ** {======================================================

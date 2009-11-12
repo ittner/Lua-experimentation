@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.150 2005/09/06 17:19:33 roberto Exp $
+** $Id: lua.c,v 1.157 2005/12/29 16:23:32 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -44,14 +44,15 @@ static void print_usage (void) {
   fprintf(stderr,
   "usage: %s [options] [script [args]].\n"
   "Available options are:\n"
-  "  -        execute stdin as a file\n"
   "  -e stat  execute string " LUA_QL("stat") "\n"
-  "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
   "  -l name  require library " LUA_QL("name") "\n"
-  "  -v       show version information\n"
   "  -j cmd   perform LuaJIT control command\n"
   "  -O[lvl]  set LuaJIT optimization level\n"
-  "  --       stop handling options\n" ,
+  "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
+  "  -v       show version information\n"
+  "  --       stop handling options\n"
+  "  -        execute stdin and stop handling options\n"
+  ,
   progname);
   fflush(stderr);
 }
@@ -102,22 +103,28 @@ static int docall (lua_State *L, int narg, int clear) {
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
   signal(SIGINT, SIG_DFL);
   lua_remove(L, base);  /* remove traceback function */
+  /* force a complete garbage collection in case of errors */
+  if (status != 0) lua_gc(L, LUA_GCCOLLECT, 0);
   return status;
 }
 
 
 static void print_version (void) {
   l_message(NULL, LUA_VERSION "  " LUA_COPYRIGHT);
+  l_message(NULL, LUAJIT_VERSION "  " LUAJIT_COPYRIGHT);
 }
 
 
-static int getargs (lua_State *L, int argc, char **argv, int n) {
-  int narg = argc - (n + 1);  /* number of arguments to the script */
+static int getargs (lua_State *L, char **argv, int n) {
+  int narg;
   int i;
+  int argc = 0;
+  while (argv[argc]) argc++;  /* count total number of arguments */
+  narg = argc - (n + 1);  /* number of arguments to the script */
   luaL_checkstack(L, narg + 3, "too many arguments to script");
   for (i=n+1; i < argc; i++)
     lua_pushstring(L, argv[i]);
-  lua_newtable(L);
+  lua_createtable(L, narg, n + 1);
   for (i=0; i < argc; i++) {
     lua_pushstring(L, argv[i]);
     lua_rawseti(L, -2, i - n);
@@ -212,7 +219,6 @@ static void dotty (lua_State *L) {
   int status;
   const char *oldprogname = progname;
   progname = NULL;
-  print_version();
   while ((status = loadline(L)) != -1) {
     if (status == 0) status = docall(L, 0, 0);
     report(L, status);
@@ -229,6 +235,24 @@ static void dotty (lua_State *L) {
   fputs("\n", stdout);
   fflush(stdout);
   progname = oldprogname;
+}
+
+
+static int handle_script (lua_State *L, char **argv, int n) {
+  int status;
+  const char *fname;
+  int narg = getargs(L, argv, n);  /* collect arguments */
+  lua_setglobal(L, "arg");
+  fname = argv[n];
+  if (strcmp(fname, "-") == 0 && strcmp(argv[n-1], "--") != 0) 
+    fname = NULL;  /* stdin */
+  status = luaL_loadfile(L, fname);
+  lua_insert(L, -(narg+1));
+  if (status == 0)
+    status = docall(L, narg, 0);
+  else
+    lua_pop(L, narg);      
+  return report(L, status);
 }
 
 /* ---- start of LuaJIT extensions */
@@ -284,102 +308,67 @@ static int dojitopt (lua_State *L, const char *opt) {
 
 /* ---- end of LuaJIT extensions */
 
-#define clearinteractive(i)	(*i &= 2)
-
-static int handle_argv (lua_State *L, int argc, char **argv, int *interactive) {
-  if (argv[1] == NULL) {  /* no arguments? */
-    *interactive = 0;
-    if (lua_stdin_is_tty())
-      dotty(L);
-    else
-      dofile(L, NULL);  /* executes stdin as a file */
+static int collectargs (char **argv, int *pi, int *pv, int *pe) {
+  int i;
+  for (i = 1; argv[i] != NULL; i++) {
+    if (argv[i][0] != '-')  /* not an option? */
+        return i;
+    switch (argv[i][1]) {  /* option */
+      case '-': return (argv[i+1] != NULL ? i+1 : 0);
+      case '\0': return i;
+      case 'i': *pi = 1;  /* go through */
+      case 'v': *pv = 1; break;
+      case 'e': *pe = 1;  /* go through */
+      case 'j':  /* LuaJIT extension */
+      case 'l':
+        if (argv[i][2] == '\0') {
+          i++;
+          if (argv[i] == NULL) return -1;
+        }
+        break;
+      case 'O': break;  /* LuaJIT extension */
+      default: return -1;  /* invalid option */
+    }
   }
-  else {  /* other arguments; loop over them */
-    int i;
-    for (i = 1; argv[i] != NULL; i++) {
-      if (argv[i][0] != '-') break;  /* not an option? */
-      switch (argv[i][1]) {  /* option */
-        case '-': {  /* `--' */
-          if (argv[i][2] != '\0') {
-            print_usage();
-            return 1;
-          }
-          i++;  /* skip this argument */
-          goto endloop;  /* stop handling arguments */
-        }
-        case '\0': {
-          clearinteractive(interactive);
-          dofile(L, NULL);  /* executes stdin as a file */
-          break;
-        }
-        case 'i': {
-          *interactive = 2;  /* force interactive mode after arguments */
-          break;
-        }
-        case 'v': {
-          clearinteractive(interactive);
-          print_version();
-          break;
-        }
-        case 'e': {
-          const char *chunk = argv[i] + 2;
-          clearinteractive(interactive);
-          if (*chunk == '\0') chunk = argv[++i];
-          if (chunk == NULL) {
-            print_usage();
-            return 1;
-          }
-          if (dostring(L, chunk, "=(command line)") != 0)
-            return 1;
-          break;
-        }
-        case 'l': {
-          const char *filename = argv[i] + 2;
-          if (*filename == '\0') filename = argv[++i];
-          if (filename == NULL) {
-            print_usage();
-            return 1;
-          }
-          if (dolibrary(L, filename))
-            return 1;  /* stop if file fails */
-          break;
-        }
-        case 'j': {  /* LuaJIT extension. */
-	  const char *cmd = argv[i] + 2;
-	  if (*cmd == '\0') cmd = argv[++i];
-          if (cmd == NULL) {
-            print_usage();
-            return 1;
-          }
-          if (dojitcmd(L, cmd))
-	    return 1;
-          break;
-        }
-        case 'O': {  /* LuaJIT extension. */
-          if (dojitopt(L, argv[i] + 2))
-	    return 1;
-          break;
-	}
-        default: {
-          clearinteractive(interactive);
-          print_usage();
+  return 0;
+}
+
+
+static int runargs (lua_State *L, char **argv, int n) {
+  int i;
+  for (i = 1; i < n; i++) {
+    if (argv[i] == NULL) continue;
+    lua_assert(argv[i][0] == '-');
+    switch (argv[i][1]) {  /* option */
+      case 'e': {
+        const char *chunk = argv[i] + 2;
+        if (*chunk == '\0') chunk = argv[++i];
+        lua_assert(chunk != NULL);
+        if (dostring(L, chunk, "=(command line)") != 0)
           return 1;
-        }
+        break;
       }
-    } endloop:
-    if (argv[i] != NULL) {
-      int status;
-      const char *filename = argv[i];
-      int narg = getargs(L, argc, argv, i);  /* collect arguments */
-      lua_setglobal(L, "arg");
-      clearinteractive(interactive);
-      status = luaL_loadfile(L, filename);
-      lua_insert(L, -(narg+1));
-      if (status == 0)
-        status = docall(L, narg, 0);
-      else
-        lua_pop(L, narg);      
-      return report(L, status);
+      case 'l': {
+        const char *filename = argv[i] + 2;
+        if (*filename == '\0') filename = argv[++i];
+        lua_assert(filename != NULL);
+        if (dolibrary(L, filename))
+          return 1;  /* stop if file fails */
+        break;
+      }
+      case 'j': {  /* LuaJIT extension */
+        const char *cmd = argv[i] + 2;
+        if (*cmd == '\0') cmd = argv[++i];
+        lua_assert(cmd != NULL);
+        if (dojitcmd(L, cmd))
+          return 1;
+        break;
+      }
+      case 'O':  /* LuaJIT extension */
+        if (dojitopt(L, argv[i] + 2))
+          return 1;
+        break;
+      default: break;
     }
   }
   return 0;
@@ -405,17 +394,37 @@ struct Smain {
 
 static int pmain (lua_State *L) {
   struct Smain *s = (struct Smain *)lua_touserdata(L, 1);
-  int status;
-  int interactive = 1;
-  if (s->argv[0] && s->argv[0][0]) progname = s->argv[0];
+  char **argv = s->argv;
+  int script;
+  int has_i = 0, has_v = 0, has_e = 0;
   globalL = L;
+  if (argv[0] && argv[0][0]) progname = argv[0];
+  lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
-  status = handle_luainit(L);
-  if (status == 0) {
-    status = handle_argv(L, s->argc, s->argv, &interactive);
-    if (status == 0 && interactive) dotty(L);
+  lua_gc(L, LUA_GCRESTART, 0);
+  s->status = handle_luainit(L);
+  if (s->status != 0) return 0;
+  script = collectargs(argv, &has_i, &has_v, &has_e);
+  if (script < 0) {  /* invalid args? */
+    print_usage();
+    s->status = 1;
+    return 0;
   }
-  s->status = status;
+  if (has_v) print_version();
+  s->status = runargs(L, argv, (script > 0) ? script : s->argc);
+  if (s->status != 0) return 0;
+  if (script)
+    s->status = handle_script(L, argv, script);
+  if (s->status != 0) return 0;
+  if (has_i)
+    dotty(L);
+  else if (script == 0 && !has_e && !has_v) {
+    if (lua_stdin_is_tty()) {
+      print_version();
+      dotty(L);
+    }
+    else dofile(L, NULL);  /* executes stdin as a file */
+  }
   return 0;
 }
 

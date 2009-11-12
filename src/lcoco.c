@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2004-2005 Mike Pall. All rights reserved.
+** Copyright (C) 2004-2006 Mike Pall. All rights reserved.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining
 ** a copy of this software and associated documentation files (the
@@ -38,6 +38,25 @@
 #include "lgc.h"
 
 
+/*
+** Define this if you want to run Coco with valgrind. You will get random
+** errors about accessing memory from newly allocated C stacks if you don't.
+** You need at least valgrind 3.0 for this to work.
+**
+** This macro evaluates to a no-op if not run with valgrind. I.e. you can
+** use the same binary for regular runs, too (without a performance loss).
+*/
+#ifdef USE_VALGRIND
+#include <valgrind/valgrind.h>
+#define STACK_REG(coco, p, sz)	(coco)->vgid = VALGRIND_STACK_REGISTER(p, p+sz);
+#define STACK_DEREG(coco)	VALGRIND_STACK_DEREGISTER((coco)->vgid);
+#define STACK_VGID		unsigned int vgid;
+#else
+#define STACK_REG(coco, p, sz)
+#define STACK_DEREG(id)
+#define STACK_VGID
+#endif
+
 /* ------------------------------------------------------------------------ */
 
 /* Use Windows Fibers. */
@@ -50,8 +69,10 @@
 
 typedef LPFIBER_START_ROUTINE coco_MainFunc;
 
+/* See: http://blogs.msdn.com/oldnewthing/archive/2004/12/31/344799.aspx */
 #define COCO_NEW(OL, NL, cstacksize, mainfunc) \
-  if (GetCurrentFiber() == NULL) ConvertThreadToFiber(NULL); \
+  { void *cur = GetCurrentFiber(); \
+    if (cur == NULL || cur == (void *)0x1e00) ConvertThreadToFiber(NULL); } \
   if ((L2COCO(NL)->fib = CreateFiber(cstacksize, mainfunc, NL)) == NULL) \
     luaD_throw(OL, LUA_ERRMEM);
 
@@ -72,94 +93,212 @@ typedef LPFIBER_START_ROUTINE coco_MainFunc;
 
 #else /* !COCO_USE_FIBERS */
 
-/* Try to find a setjmp method unless ucontext is forced. */
 #ifndef COCO_USE_UCONTEXT
 
+/* Try inline asm first. */
+#if __GNUC__ >= 3 && !defined(COCO_USE_SETJMP)
+
+#if defined(__i386) || defined(__i386__)
+
+#ifdef __PIC__
+typedef void *coco_ctx[4];  /* eip, esp, ebp, ebx */
+static inline void coco_switch(coco_ctx from, coco_ctx to)
+{
+  __asm__ __volatile__ (
+    "call 1f\n" "1:\tpopl %%eax\n\t" "addl $(2f-1b),%%eax\n\t"
+    "movl %%eax, (%0)\n\t" "movl %%esp, 4(%0)\n\t"
+    "movl %%ebp, 8(%0)\n\t" "movl %%ebx, 12(%0)\n\t"
+    "movl 12(%1), %%ebx\n\t" "movl 8(%1), %%ebp\n\t"
+    "movl 4(%1), %%esp\n\t" "jmp *(%1)\n" "2:\n"
+    : "+S" (from), "+D" (to) : : "eax", "ecx", "edx", "memory", "cc");
+}
+#else
+typedef void *coco_ctx[3];  /* eip, esp, ebp */
+static inline void coco_switch(coco_ctx from, coco_ctx to)
+{
+  __asm__ __volatile__ (
+    "movl $1f, (%0)\n\t" "movl %%esp, 4(%0)\n\t" "movl %%ebp, 8(%0)\n\t"
+    "movl 8(%1), %%ebp\n\t" "movl 4(%1), %%esp\n\t" "jmp *(%1)\n" "1:\n"
+    : "+S" (from), "+D" (to) : : "eax", "ebx", "ecx", "edx", "memory", "cc");
+}
+#endif
+
+#define COCO_CTX		coco_ctx
+#define COCO_SWITCH(from, to)	coco_switch(from, to);
+#define COCO_MAKECTX(coco, buf, func, stack, a0) \
+  buf[0] = (void *)(func); \
+  buf[1] = (void *)(stack); \
+  buf[2] = (void *)0; \
+  stack[0] = 0xdeadc0c0;  /* Dummy return address. */ \
+  coco->arg0 = (size_t)(a0);
+#define COCO_STATE_HEAD		size_t arg0;
+
+#elif __mips && _MIPS_SIM == _MIPS_SIM_ABI32 && !defined(__mips_eabi)
+
+/* No way to avoid the function prologue with inline assembler. So use this: */
+static const unsigned int coco_switch[] = {
+#ifdef __mips_soft_float
+#define COCO_STACKSAVE		-10
+  0x27bdffd8,  /* addiu sp, sp, -(10*4) */
+#else
+#define COCO_STACKSAVE		-22
+  0x27bdffa8,  /* addiu sp, sp, -(10*4+6*8) */
+  /* sdc1 {$f20-$f30}, offset(sp) */
+  0xf7be0050, 0xf7bc0048, 0xf7ba0040, 0xf7b80038, 0xf7b60030, 0xf7b40028,
+#endif
+  /* sw {gp,s0-s8}, offset(sp) */
+  0xafbe0024, 0xafb70020, 0xafb6001c, 0xafb50018, 0xafb40014, 0xafb30010,
+  0xafb2000c, 0xafb10008, 0xafb00004, 0xafbc0000,
+  /* sw sp, 4(a0); sw ra, 0(a0); lw ra, 0(a1); lw sp, 4(a1); move t9, ra */
+  0xac9d0004, 0xac9f0000, 0x8cbf0000, 0x8cbd0004, 0x03e0c821,
+  /* lw caller-saved-reg, offset(sp) */
+  0x8fbe0024, 0x8fb70020, 0x8fb6001c, 0x8fb50018, 0x8fb40014, 0x8fb30010,
+  0x8fb2000c, 0x8fb10008, 0x8fb00004, 0x8fbc0000,
+#ifdef __mips_soft_float
+  0x03e00008, 0x27bd0028  /* jr ra; addiu sp, sp, 10*4 */
+#else
+  /* ldc1 {$f20-$f30}, offset(sp) */
+  0xd7be0050, 0xd7bc0048, 0xd7ba0040, 0xd7b80038, 0xd7b60030, 0xd7b40028,
+  0x03e00008, 0x27bd0058  /* jr ra; addiu sp, sp, 10*4+6*8 */
+#endif
+};
+
+typedef void *coco_ctx[2];  /* ra, sp */
+#define COCO_CTX		coco_ctx
+#define COCO_SWITCH(from, to) \
+  ((void (*)(coco_ctx, coco_ctx))coco_switch)(from, to);
+#define COCO_MAKECTX(coco, buf, func, stack, a0) \
+  buf[0] = (void *)(func); \
+  buf[1] = (void *)&stack[COCO_STACKSAVE]; \
+  stack[4] = (size_t)(a0);  /* Assumes o32 ABI. */
+#define COCO_STACKADJUST	8
+#define COCO_MAIN_PARAM		int _a, int _b, int _c, int _d, lua_State *L
+
+#endif /* arch check */
+
+#endif /* !(__GNUC__ >= 3 && !defined(COCO_USE_SETJMP)) */
+
+/* Try _setjmp/_longjmp with a patched jump buffer. */
+#ifndef COCO_MAKECTX
 #include <setjmp.h>
 
 /* Check for supported CPU+OS combinations. */
-#if defined(i386) || defined(__i386__) || defined(_M_IX86)
+#if defined(__i386) || defined(__i386__)
 
 #define COCO_STATE_HEAD		size_t arg0;
 #define COCO_SETJMP_X86(coco, stack, a0) \
   stack[COCO_STACKADJUST-1] = 0xdeadc0c0;  /* Dummy return address. */ \
   coco->arg0 = (size_t)(a0);
 
-#if defined(JB_SP) && defined(JB_PC)		/* x86-linux-glibc2 */
-#define SETJMP_PATCH(coco, buf, func, stack, a0) \
+#if __GLIBC__ == 2 && defined(JB_SP)		/* x86-linux-glibc2 */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
   buf->__jmpbuf[JB_PC] = (int)(func); \
   buf->__jmpbuf[JB_SP] = (int)(stack); \
   buf->__jmpbuf[JB_BP] = 0; \
   COCO_SETJMP_X86(coco, stack, a0)
-#elif defined(_I386_JMP_BUF_H)			/* x86-linux-libc5 */
-#define SETJMP_PATCH(coco, buf, func, stack, a0) \
-  buf->__sp = (stack); \
+#elif defined(__linux__) && defined(_I386_JMP_BUF_H)	/* x86-linux-libc5 */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
   buf->__pc = (func); \
+  buf->__sp = (stack); \
   buf->__bp = NULL; \
   COCO_SETJMP_X86(coco, stack, a0)
 #elif defined(__FreeBSD__)			/* x86-FreeBSD */
-#define SETJMP_PATCH(coco, buf, func, stack, a0) \
-  buf->_jb[2] = (long)(stack); \
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
   buf->_jb[0] = (long)(func); \
+  buf->_jb[2] = (long)(stack); \
   buf->_jb[3] = 0; /* ebp */ \
   COCO_SETJMP_X86(coco, stack, a0)
 #define COCO_STACKADJUST	2
 #elif defined(__NetBSD__) || defined(__OpenBSD__) /* x86-NetBSD, x86-OpenBSD */
-#define SETJMP_PATCH(coco, buf, func, stack, a0) \
-  buf[2] = (long)(stack); \
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
   buf[0] = (long)(func); \
+  buf[2] = (long)(stack); \
   buf[3] = 0; /* ebp */ \
   COCO_SETJMP_X86(coco, stack, a0)
 #define COCO_STACKADJUST	2
+#elif defined(__solaris__) && _JBLEN == 10	/* x86-solaris */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
+  buf[5] = (int)(func); \
+  buf[4] = (int)(stack); \
+  buf[3] = 0; \
+  COCO_SETJMP_X86(coco, stack, a0)
+#elif defined(__MACH__) && defined(_BSD_I386_SETJMP_H_)	/* x86-macosx */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
+  buf[12] = (int)(func); \
+  buf[9] = (int)(stack); \
+  buf[8] = 0; /* ebp */ \
+  COCO_SETJMP_X86(coco, stack, a0)
 #endif
 
 #elif defined(__x86_64__) || defined(__x86_64)
 
 #define COCO_STATE_HEAD		size_t arg0;
 
-#if defined(JB_RSP) && defined(JB_PC)		/* x64-linux-glibc2 */
-#define SETJMP_PATCH(coco, buf, func, stack, a0) \
-  buf->__jmpbuf[JB_RSP] = (long)(stack); \
-  buf->__jmpbuf[JB_PC] = (long)(func); \
-  stack[0] = 0xdeadc0c0;  /* Dummy return address. */ \
-  coco->arg0 = (size_t)(a0);
 #define COCO_MAIN_PARAM \
   int _a, int _b, int _c, int _d, int _e, int _f, lua_State *L
+
+#if __GLIBC__ == 2 && defined(JB_RSP)		/* x64-linux-glibc2 */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
+  buf->__jmpbuf[JB_PC] = (long)(func); \
+  buf->__jmpbuf[JB_RSP] = (long)(stack); \
+  buf->__jmpbuf[JB_RBP] = 0; \
+  stack[0] = 0xdeadc0c0;  /* Dummy return address. */ \
+  coco->arg0 = (size_t)(a0);
+#elif defined(__solaris__) && _JBLEN == 8		/* x64-solaris */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
+  buf[7] = (long)(func); \
+  buf[6] = (long)(stack); \
+  buf[5] = 0; \
+  stack[0] = 0xdeadc0c0;  /* Dummy return address. */ \
+  coco->arg0 = (size_t)(a0);
 #endif
 
 #elif defined(PPC) || defined(__ppc__) || defined(__PPC__) || \
       defined(__powerpc__) || defined(__POWERPC__) || defined(_ARCH_PPC)
 
 #define COCO_STACKADJUST	16
-
-#if defined(__MACH__) && defined(_BSD_PPC_SETJMP_H_)	/* ppc32-osx */
-#define SETJMP_PATCH(coco, buf, func, stack, a0) \
-  buf[0] = (int)(stack); \
-  buf[21] = (int)(func); \
-  stack[6+8] = (size_t)(a0);
 #define COCO_MAIN_PARAM \
   int _a, int _b, int _c, int _d, int _e, int _f, int _g, int _h, lua_State *L
+
+#if defined(__MACH__) && defined(_BSD_PPC_SETJMP_H_)	/* ppc32-macosx */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
+  buf[21] = (int)(func); \
+  buf[0] = (int)(stack); \
+  stack[6+8] = (size_t)(a0);
 #endif
 
-#endif  /* arch check */
+#elif (defined(MIPS) || defined(MIPSEL) || defined(__mips)) && \
+  _MIPS_SIM == _MIPS_SIM_ABI32 && !defined(__mips_eabi)
 
-#endif /* !COCO_USE_UCONTEXT */
+/* Stack layout for o32 ABI. */
+#define COCO_STACKADJUST	8
+#define COCO_MAIN_PARAM		int _a, int _b, int _c, int _d, lua_State *L
+
+#if __GLIBC__ == 2 || defined(__UCLIBC__)	/* mips32-linux-glibc2 */
+#define COCO_PATCHCTX(coco, buf, func, stack, a0) \
+  buf->__jmpbuf->__pc = (func); /* = t9 in _longjmp. Reqd. for -mabicalls. */ \
+  buf->__jmpbuf->__sp = (stack); \
+  buf->__jmpbuf->__fp = (void *)0; \
+  stack[4] = (size_t)(a0);
+#endif
+
+#endif /* arch check */
+
+#ifdef COCO_PATCHCTX
+#define COCO_CTX		jmp_buf
+#define COCO_MAKECTX(coco, buf, func, stack, a0) \
+  _setjmp(buf); COCO_PATCHCTX(coco, buf, func, stack, a0)
+#define COCO_SWITCH(from, to)	if (!_setjmp(from)) _longjmp(to, 1);
+#endif
+
+#endif /* !defined(COCO_MAKECTX) */
+
+#endif /* !defined(COCO_USE_UCONTEXT) */
 
 /* ------------------------------------------------------------------------ */
 
-/* Use setjmp if available. */
-#ifdef SETJMP_PATCH
-
-struct coco_State {
-#ifdef COCO_STATE_HEAD
-  COCO_STATE_HEAD
-#endif
-  jmp_buf jmp;			/* Own context. */
-  jmp_buf back;			/* Context to switch back to. */
-  void *allocptr;		/* Pointer to allocated memory. */
-  int allocsize;		/* Size of allocated memory. */
-  int nargs;			/* Number of arguments to pass. */
-};
+/* Use inline asm or _setjmp/_longjmp if available. */
+#ifdef COCO_MAKECTX
 
 #ifndef COCO_STACKADJUST
 #define COCO_STACKADJUST	1
@@ -168,30 +307,17 @@ struct coco_State {
 #define COCO_FILL(coco, NL, mainfunc) \
 { /* Include the return address to get proper stack alignment. */ \
   size_t *stackptr = &((size_t *)coco)[-COCO_STACKADJUST]; \
-  _setjmp(coco->jmp); \
-  SETJMP_PATCH(coco, coco->jmp, mainfunc, stackptr, NL) \
+  COCO_MAKECTX(coco, coco->ctx, mainfunc, stackptr, NL) \
 }
-
-#define COCO_JUMPIN(coco) \
-  if (_setjmp(coco->back) == 0) _longjmp(coco->jmp, 1);
-
-#define COCO_JUMPOUT(coco) \
-  if (_setjmp(coco->jmp) == 0) _longjmp(coco->back, 1);
 
 /* ------------------------------------------------------------------------ */
 
-/* Fallback to ucontext. Slower, because it saves/restores signals. */
-#else
+/* Else fallback to ucontext. Slower, because it saves/restores signals. */
+#else /* !defined(COCO_MAKECTX) */
 
 #include <ucontext.h>
 
-struct coco_State {
-  ucontext_t ctx;		/* Own context. */
-  ucontext_t back;		/* Context to switch back to. */
-  void *allocptr;		/* Pointer to allocated memory. */
-  int allocsize;		/* Size of allocated memory. */
-  int nargs;			/* Number of arguments to pass. */
-};
+#define COCO_CTX		ucontext_t
 
 /* Ugly workaround for makecontext() deficiencies on 64 bit CPUs. */
 /* Note that WIN64 (which is LLP64) never comes here. See above. */
@@ -200,12 +326,12 @@ struct coco_State {
 #define COCO_MAIN_PARAM		unsigned int lo, unsigned int hi
 #define COCO_MAIN_GETL \
   lua_State *L = (lua_State *)((((unsigned long)hi)<<32)+(unsigned long)lo);
-#define COCO_MAKECONTEXT(coco, NL, mainfunc) \
+#define COCO_MAKECTX(coco, NL, mainfunc) \
   makecontext(&coco->ctx, mainfunc, 2, \
     (int)(ptrdiff_t)NL, (int)((ptrdiff_t)NL>>32));
 #else
 /* 32 bit CPU: a pointer fits into an int. */
-#define COCO_MAKECONTEXT(coco, NL, mainfunc) \
+#define COCO_MAKECTX(coco, NL, mainfunc) \
   makecontext(&coco->ctx, mainfunc, 1, (int)NL);
 #endif
 
@@ -214,18 +340,26 @@ struct coco_State {
   coco->ctx.uc_link = NULL;  /* We never exit from coco_main. */ \
   coco->ctx.uc_stack.ss_sp = coco->allocptr; \
   coco->ctx.uc_stack.ss_size = (char *)coco - (char *)(coco->allocptr); \
-  COCO_MAKECONTEXT(coco, NL, mainfunc)
+  COCO_MAKECTX(coco, NL, mainfunc)
 
-#define COCO_JUMPIN(coco) \
-  swapcontext(&coco->back, &coco->ctx);
+#define COCO_SWITCH(from, to)	swapcontext(&(from), &(to));
 
-#define COCO_JUMPOUT(coco) \
-  swapcontext(&coco->ctx, &coco->back);
+#endif /* !defined(COCO_MAKECTX) */
 
+
+/* Common code for inline asm/setjmp/ucontext to allocate/free the stack. */
+
+struct coco_State {
+#ifdef COCO_STATE_HEAD
+  COCO_STATE_HEAD
 #endif
-
-
-/* Common code for setjmp/ucontext to allocate/free the stack. */
+  COCO_CTX ctx;			/* Own context. */
+  COCO_CTX back;		/* Context to switch back to. */
+  void *allocptr;		/* Pointer to allocated memory. */
+  int allocsize;		/* Size of allocated memory. */
+  int nargs;			/* Number of arguments to pass. */
+  STACK_VGID			/* Optional valgrind stack id. See above. */
+};
 
 typedef void (*coco_MainFunc)(void);
 
@@ -234,10 +368,11 @@ typedef void (*coco_MainFunc)(void);
   ((t *)(((char *)0) + ((((char *)(p)-(char *)0)+(s)-sizeof(t)) & -16)))
 
 /* TODO: use mmap. */
-#define COCO_NEW(OL, L, cstacksize, mainfunc) \
+#define COCO_NEW(OL, NL, cstacksize, mainfunc) \
 { \
   void *ptr = luaM_malloc(OL, cstacksize); \
   coco_State *coco = ALIGNED_END(ptr, cstacksize, coco_State); \
+  STACK_REG(coco, ptr, cstacksize) \
   coco->allocptr = ptr; \
   coco->allocsize = cstacksize; \
   COCO_FILL(coco, NL, mainfunc) \
@@ -245,17 +380,21 @@ typedef void (*coco_MainFunc)(void);
 }
 
 #define COCO_FREE(L) \
+  STACK_DEREG(L2COCO(L)) \
   luaM_freemem(L, L2COCO(L)->allocptr, L2COCO(L)->allocsize);
+
+#define COCO_JUMPIN(coco)	COCO_SWITCH(coco->back, coco->ctx)
+#define COCO_JUMPOUT(coco)	COCO_SWITCH(coco->ctx, coco->back)
 
 #endif /* !COCO_USE_FIBERS */
 
 /* ------------------------------------------------------------------------ */
 
 #ifndef COCO_MIN_CSTACKSIZE
-#define COCO_MIN_CSTACKSIZE		4096
+#define COCO_MIN_CSTACKSIZE		(32768+4096)
 #endif
 
-/* Don't use multiples of 64K to avoid aliasing problems. */
+/* Don't use multiples of 64K to avoid D-cache aliasing conflicts. */
 #ifndef COCO_DEFAULT_CSTACKSIZE
 #define COCO_DEFAULT_CSTACKSIZE		(65536-4096)
 #endif
@@ -325,10 +464,9 @@ int luaCOCO_resume(lua_State *L, int nargs)
 }
 
 /* Yield from a coroutine with a C stack. Called from ldo.c. */
-int luaCOCO_yield(lua_State *L, int nresults)
+int luaCOCO_yield(lua_State *L)
 {
   coco_State *coco = L2COCO(L);
-  L->base = L->top - nresults;  /* Protect stack slots below. */
   L->status = LUA_YIELD;
   COCO_JUMPOUT(coco)
   L->status = 0;
@@ -337,7 +475,7 @@ int luaCOCO_yield(lua_State *L, int nresults)
     StkId rbase = L->base;
     if (rbase < base) {  /* Need to move args down? */
       while (base < L->top)
-	setobjs2s(L, rbase++, base++); 
+	setobjs2s(L, rbase++, base++);
       L->top = rbase;
     }
   }

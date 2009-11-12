@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005 Mike Pall. All rights reserved.
+** Copyright (C) 2005-2006 Mike Pall. All rights reserved.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining
 ** a copy of this software and associated documentation files (the
@@ -31,6 +31,11 @@
 
 #include "lua.h"
 
+
+#define LUAJIT_VERSION		"LuaJIT 1.1.0"
+#define LUAJIT_VERSION_NUM	10100  /* Version 1.1.0 = 01.10.00. */
+#define LUAJIT_COPYRIGHT	"Copyright (C) 2005-2006 Mike Pall"
+#define LUAJIT_URL		"http://luajit.luaforge.net/"
 
 /* Modes for luaJIT_setmode. */
 #define LUAJIT_MODE_MASK	0x00ff

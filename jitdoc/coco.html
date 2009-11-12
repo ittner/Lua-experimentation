@@ -4,7 +4,7 @@
 <title>Coco</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
 <meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005, Mike Pall" />
+<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
 <meta name="Language" content="en" />
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
@@ -44,6 +44,8 @@
 <a href="coco_portability.html">Portability</a>
 </li><li>
 <a href="coco_api.html">API Extensions</a>
+</li><li>
+<a href="coco_changes.html">Changes</a>
 </li></ul>
 </li><li>
 <a href="dynasm.html">DynASM</a>
@@ -63,16 +65,16 @@ semantics for Lua 5.1.
 </p>
 <p>
 Coco is both available as a stand-alone release and integrated
-into LuaJIT.
+into <a href="luajit.html">LuaJIT</a>.
 </p>
 <p>
 The stand-alone release is a patchset against the
-<a href="http://www.lua.org/"><span class="ext">&raquo;</span>&nbsp;standard Lua</a>
+<a href="http://www.lua.org/ftp/"><span class="ext">&raquo;</span>&nbsp;standard Lua 5.1</a>
 distribution. There are no dependencies on LuaJIT. However LuaJIT
 depends on Coco to allow yielding for JIT compiled functions.
 </p>
 <p>
-Coco is Copyright &copy; 2005 Mike Pall.
+Coco is Copyright &copy; 2004-2006 Mike Pall.
 Coco is free software, released under the
 <a href="http://www.opensource.org/licenses/mit-license.php"><span class="ext">&raquo;</span>&nbsp;MIT/X license</a>
 (same license as the Lua core).
@@ -84,7 +86,7 @@ across a C&nbsp;call boundary and resume back to it.
 </p>
 <p>
 Coco allows you to use a dedicated C&nbsp;stack for each coroutine.
-Resuming and yielding to/from a coroutine automatically switches
+Resuming a coroutine and yielding from a coroutine automatically switches
 C&nbsp;stacks, too.
 </p>
 <p>
@@ -102,24 +104,16 @@ Best of all, you don't need to change your Lua or C&nbsp;sources
 and still get the benefits. It's fully integrated into the
 Lua core, but tries to minimize the required changes.
 </p>
-<p>
-Coco is still work-in-progress. It will likely change quite
-a bit in the next few releases due to some upcoming changes
-(e.g. mmap'ed C&nbsp;stacks or faster context switching with inline assembly).
-</p>
 <h2>More ...</h2>
 <p>
-The latest stand-alone release of Coco is a pre-release for Lua 5.1-work6.
-It will be updated shortly after the initial release of LuaJIT.
-<!--
 Please visit the <a href="http://luajit.luaforge.net/download.html"><span class="ext">&raquo;</span>&nbsp;Download</a> page
-to fetch the most recent version.
--->
-Coco is already included in the LuaJIT download package.
+to fetch the latest version of the stand-alone package.
 </p>
 <p>
 Coco needs some machine-specific features &mdash; please have a look
 at the <a href="coco_portability.html">Portability Requirements</a>.
+</p>
+<p>
 Coco also provides some upwards-compatible
 <a href="coco_api.html">API Extensions</a> for Lua.
 </p>
@@ -127,7 +121,7 @@ Coco also provides some upwards-compatible
 </div>
 <div id="foot">
 <hr class="hide" />
-Copyright &copy; 2005 Mike Pall
+Copyright &copy; 2005-2006 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

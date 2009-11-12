@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- DynASM x86 module.
 --
--- Copyright (C) 2005 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2006 Mike Pall. All rights reserved.
 -- See dynasm.lua for full copyright notice.
 ------------------------------------------------------------------------------
 
@@ -9,9 +9,9 @@
 local _info = {
   arch =	"x86",
   description =	"DynASM x86 (i386) module",
-  version =	"1.0.2",
-  vernum =	 10002,
-  release =	"2005-08-29",
+  version =	"1.1.0",
+  vernum =	 10100,
+  release =	"2006-03-13",
   author =	"Mike Pall",
   license =	"MIT",
 }
@@ -36,14 +36,16 @@ local wline, werror, wfatal, wwarn
 local action_names = {
   -- int arg, 1 buffer pos:
   "DISP",  "IMM_S", "IMM_B", "IMM_W", "IMM_D",  "IMM_WB", "IMM_DB",
-  -- ptrdiff_t arg, 1 buffer pos: !x64
-  "REL_G",
+  -- action arg (1 byte), int arg, 1 buffer pos (num):
+  "SPACE",
+  -- ptrdiff_t arg, 1 buffer pos (address): !x64
+  "SETLABEL", "REL_A",
   -- action arg (1 byte) or int arg, 2 buffer pos (link, offset):
-  "REL_L", "REL_P",
+  "REL_LG", "REL_PC",
   -- action arg (1 byte) or int arg, 1 buffer pos (link):
-  "IMM_L", "IMM_P",
+  "IMM_LG", "IMM_PC",
   -- action arg (1 byte) or int arg, 1 buffer pos (offset):
-  "LABEL_L", "LABEL_P",
+  "LABEL_LG", "LABEL_PC",
   -- action arg (1 byte), 1 buffer pos (offset):
   "ALIGN",
   -- action arg (1 byte), no buffer pos.
@@ -58,7 +60,7 @@ local action_names = {
 
 -- Maximum number of section buffer positions for dasm_put().
 -- CHECK: Keep this in sync with the C code!
-local maxsecpos = 15 -- Keep this low, to avoid excessively long C lines.
+local maxsecpos = 25 -- Keep this low, to avoid excessively long C lines.
 
 -- Action name -> action number (dynamically generated below).
 local map_action = {}
@@ -92,7 +94,7 @@ local function dumpactions(out)
 end
 
 -- Write action list buffer as a huge static C array.
-function _M.writelist(out, name)
+local function writeactions(out, name)
   local nn = #actlist
   local last = actlist[nn] or 255
   actlist[nn] = nil -- Remove last byte.
@@ -168,6 +170,41 @@ end
 
 ------------------------------------------------------------------------------
 
+-- Global label name -> global label number. With auto assignment on 1st use.
+local next_global = 10
+local map_global = setmetatable({}, { __index = function(t, name)
+  if not match(name, "^[%a_][%w_]*$") then werror("bad global label") end
+  local n = next_global
+  if n > 246 then werror("too many global labels") end
+  next_global = n + 1
+  t[name] = n
+  return n
+end})
+
+-- Dump global labels.
+local function dumpglobals(out, lvl)
+  local t = {}
+  for name, n in pairs(map_global) do t[n] = name end
+  out:write("Global labels:\n")
+  for i=10,next_global-1 do
+    out:write(format("  %s\n", t[i]))
+  end
+  out:write("\n")
+end
+
+-- Write global label enum.
+local function writeglobals(out, prefix)
+  local t = {}
+  for name, n in pairs(map_global) do t[n] = name end
+  out:write("enum {\n")
+  for i=10,next_global-1 do
+    out:write("  ", prefix, t[i], ",\n")
+  end
+  out:write("  ", prefix, "_MAX\n};\n")
+end
+
+------------------------------------------------------------------------------
+
 -- Arch-specific maps.
 local map_archdef = {}		-- Ext. register name -> int. name.
 local map_reg_rev = {}		-- Int. register name -> ext. name.
@@ -208,6 +245,9 @@ mkrmap("b", {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"})
 -- FP registers (internally tword sized, but use "f" as operand size).
 mkrmap("f", {"st0", "st1", "st2", "st3", "st4", "st5", "st6", "st7"})
 
+-- SSE registers (oword sized, but qword and dword accessible).
+mkrmap("o", {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"})
+
 -- Operand size prefixes to codes.
 local map_opsize = {
   byte = "b", word = "w", dword = "d", qword = "q", oword = "o", tword = "t",
@@ -240,12 +280,8 @@ local map_cc = {
 
 
 -- Reverse defines for registers.
-local function revsubst(s)
-  return map_reg_rev[s] or s
-end
-
 function _M.revdef(s)
-  return gsub(s, "@%w+", revsubst)
+  return gsub(s, "@%w+", map_reg_rev)
 end
 
 -- Dump register names and numbers
@@ -315,13 +351,13 @@ local function wputszarg(sz, n)
   else werror("bad operand size") end
 end
 
--- Put action for label arg (IMM_L, IMM_P, REL_L, REL_P).
+-- Put action for label arg (IMM_LG, IMM_PC, REL_LG, REL_PC).
 local function wputlabel(aprefix, imm, num)
   if type(imm) == "number" then
-    waction(aprefix.."L", nil, num);
-    wputxb(imm < 0 and -imm or 256-imm) -- Reverse sense (fwd < 0).
+    waction(aprefix.."LG", nil, num);
+    wputxb(imm)
   else
-    waction(aprefix.."P", imm, num)
+    waction(aprefix.."PC", imm, num)
   end
 end
 
@@ -332,7 +368,7 @@ local function wputop(sz, op)
   if op >= 16777216 then r = op % 16777216 wputb((op-r) / 16777216) op = r end
   if op >= 65536 then r = op % 65536 wputb((op-r) / 65536) op = r end
   if op >= 256 then r = op % 256 wputb((op-r) / 256) op = r end
-  if sz == "b" then op = op - 1 elseif sz == "q" then op = op + 4 end
+  if sz == "b" then op = op - 1 end
   wputb(op)
 end
 
@@ -577,9 +613,17 @@ local function parseoperand(param)
 	  break
 	end
 
-	-- ->expr (pc label reference)
-	if sub(expr, 1, 2) == "->" then
+	local prefix = sub(expr, 1, 2)
+	-- =>expr (pc label reference)
+	if prefix == "=>" then
 	  t.imm = sub(expr, 3)
+	  t.opsize = addrsize
+	  t.mode = "iJ"
+	  break
+	end
+	-- ->name (global label reference)
+	if prefix == "->" then
+	  t.imm = map_global[sub(expr, 3)]
 	  t.opsize = addrsize
 	  t.mode = "iJ"
 	  break
@@ -588,7 +632,7 @@ local function parseoperand(param)
 	-- [<>][1-9] (local label reference)
 	local dir, lnum = match(expr, "^([<>])([1-9])$")
 	if dir then
-	  t.imm = lnum * (dir == ">" and 1 or -1)
+	  t.imm = lnum + (dir == ">" and 246 or 0) -- Fwd: 247-255, Bkwd: 1-9.
 	  t.opsize = addrsize
 	  t.mode = "iJ"
 	  break
@@ -641,6 +685,8 @@ end
 -- If the list has a "1" or "2" prefix, the operand size is taken
 -- from the respective operand and any other operand sizes are ignored.
 -- If the list contains only ".", all operand sizes are ignored.
+-- If the list has a "/" prefix, the concatenated (mixed) operand sizes
+-- are compared to the match.
 --
 -- E.g. "rrdw" matches for either two dword registers or two word
 -- registers. "Fx2dq" matches an st0 operand plus an index operand
@@ -648,8 +694,8 @@ end
 --
 -- Every character after the ":" is part of the pattern string:
 --   Hex chars are accumulated to form the opcode (left to right).
---   "n"       disables the standard opcode mods (otherwise: -1 for "b",
---             o16 prefix for "w" and +4 for "q")
+--   "n"       disables the standard opcode mods
+--             (otherwise: -1 for "b", o16 prefix for "w")
 --   "r"/"R"   adds the reg. number from the 1st/2nd operand to the opcode.
 --   "m"/"M"   generates ModRM/SIB from the 1st/2nd operand.
 --             The spare 3 bits are either filled with the last hex digit or
@@ -838,19 +884,31 @@ local map_op = {
   imul_2 =	"rmdw:0FAFrM|rIdw:69rmI|rSdw:6BrmS|ridw:69rmi",
   imul_3 =	"rmIdw:69rMI|rmSdw:6BrMS|rmidw:69rMi",
 
+  movzx_2 =	"rm/db:0FB6rM|rm/wb:0FB6rM|rm/dw:0FB7rM",
+  movsx_2 =	"rm/db:0FBErM|rm/wb:0FBErM|rm/dw:0FBFrM",
+
+  bswap_1 =	"rd:0FC8r",
+  bsf_2 =	"rmdw:0FBCrM",
+  bsr_2 =	"rmdw:0FBDrM",
+  bt_2 =	"mrdw:0FA3Rm|midw:0FBA4mU",
+  btc_2 =	"mrdw:0FBBRm|midw:0FBA7mU",
+  btr_2 =	"mrdw:0FB3Rm|midw:0FBA6mU",
+  bts_2 =	"mrdw:0FABRm|midw:0FBA5mU",
+
   rdtsc_0 =	"0F31", -- P1+
   cpuid_0 =	"0FA2", -- P1+
 
   -- floating point ops
-  fst_1 =	"ff:DDD0r|xdq:D92m",
-  fstp_1 =	"ff:DDD8r|xdq:D93m|xt:DB7m",
-  fld_1 =	"ff:D9C0r|xdq:D90m|xt:DB5m",
+  fst_1 =	"ff:DDD0r|xd:D92m|xq:DD2m",
+  fstp_1 =	"ff:DDD8r|xd:D93m|xq:DD3m|xt:DB7m",
+  fld_1 =	"ff:D9C0r|xd:D90m|xq:DD0m|xt:DB5m",
 
   fpop_0 =	"DDD8", -- Alias for fstp st0.
 
   fist_1 =	"xw:nDF2m|xd:DB2m",
-  fistp_1 =	"xw:nDF3m|xd:DB3m|xq:nDF7m",
-  fild_1 =	"xw:nDF0m|xd:DB0m|xq:nDF5m",
+  fistp_1 =	"xw:nDF3m|xd:DB3m|xq:DF7m",
+  fisttp_1 =	"xw:nDF1m|xd:DB1m|xq:DD1m", -- SSE3
+  fild_1 =	"xw:nDF0m|xd:DB0m|xq:DF5m",
 
   fxch_0 =	"D9C9",
   fxch_1 =	"ff:D9C8r",
@@ -915,6 +973,177 @@ local map_op = {
   fscale_0 =	"D9FD",
   fsin_0 =	"D9FE",
   fcos_0 =	"D9FF",
+
+  -- SSE, SSE2, SSE3, SSE4 ops
+  addsubpd_2 =	"rmo:660FD0rM",
+  addsubps_2 =	"rmo:F20FD0rM",
+  andnpd_2 =	"rmo:660F55rM",
+  andnps_2 =	"rmo:0F55rM",
+  andpd_2 =	"rmo:660F54rM",
+  andps_2 =	"rmo:0F54rM",
+  clflush_1 =	"x.:0FAE7m",
+  cmppd_3 =	"rmio:660FC2rMU",
+  cmpps_3 =	"rmio:0FC2rMU",
+  cmpsd_3 =	"rmio:F20FC2rMU",
+  cmpsd_3 =	"rmio:F30FC2rMU",
+  comisd_2 =	"rmo:660F2FrM",
+  comiss_2 =	"rmo:0F2FrM",
+  cvtdq2pd_2 =	"rro:F30FE6rM|rx/oq:",
+  cvtdq2ps_2 =	"rmo:0F5BrM",
+  cvtpd2dq_2 =	"rmo:F20FE6rM",
+  cvtpd2ps_2 =	"rmo:660F5ArM",
+  cvtpi2pd_2 =	"rx/oq:660F2ArM",
+  cvtpi2ps_2 =	"rx/oq:0F2ArM",
+  cvtps2dq_2 =	"rmo:660F5BrM",
+  cvtps2pd_2 =	"rro:0F5ArM|rx/oq:",
+  cvtsd2si_2 =	"rr/do:F20F2DrM|rx/dq:",
+  cvtsd2ss_2 =	"rro:F20F5ArM|rx/oq:",
+  cvtsi2sd_2 =	"rm/od:F20F2ArM",
+  cvtsi2ss_2 =	"rm/od:F30F2ArM",
+  cvtss2sd_2 =	"rro:F30F5ArM|rx/od:",
+  cvtss2si_2 =	"rr/do:F20F2CrM|rx/dd:",
+  cvttpd2dq_2 =	"rmo:660FE6rM",
+  cvttps2dq_2 =	"rmo:F30F5BrM",
+  cvttsd2si_2 =	"rr/do:F20F2CrM|rx/dq:",
+  cvttss2si_2 =	"rr/do:F30F2CrM|rx/dd:",
+  haddpd_2 =	"rmo:660F7CrM",
+  haddps_2 =	"rmo:F20F7CrM",
+  hsubpd_2 =	"rmo:660F7DrM",
+  hsubps_2 =	"rmo:F20F7DrM",
+  lddqu_2 =	"rxo:F20FF0rM",
+  ldmxcsr_1 =	"xd:0FAE2m",
+  lfence_0 =	"0FAEE8",
+  maskmovdqu_2 = "rro:660FF7rM",
+  mfence_0 =	"0FAEF0",
+  movapd_2 =	"rmo:660F28rM|mro:660F29Rm",
+  movaps_2 =	"rmo:0F28rM|mro:0F29Rm",
+  movd_2 =	"rm/od:660F6ErM|mr/do:660F7ERm",
+  movddup_2 =	"rmo:F20F12rM",
+  movdqa_2 =	"rmo:660F6FrM|mro:660F7FRm",
+  movdqu_2 =	"rmo:F30F6FrM|mro:F30F7FRm",
+  movhlps_2 =	"rro:0F12rM",
+  movhpd_2 =	"rx/oq:660F16rM|xr/qo:660F17Rm",
+  movhps_2 =	"rx/oq:0F16rM|xr/qo:0F17Rm",
+  movlhps_2 =	"rro:0F16rM",
+  movlpd_2 =	"rx/oq:660F12rM|xr/qo:660F13Rm",
+  movlps_2 =	"rx/oq:0F12rM|xr/qo:0F13Rm",
+  movmskpd_2 =	"rr/do:660F50rM",
+  movmskps_2 =	"rr/do:0F50rM",
+  movntdq_2 =	"xro:660FE7Rm",
+  movnti_2 =	"xrd:0FC3Rm",
+  movntpd_2 =	"xro:660F2BRm",
+  movntps_2 =	"xro:0F2BRm",
+  movq_2 =	"rro:F30F7ErM|rx/oq:|xr/qo:660FD6Rm",
+  movsd_2 =	"rro:F20F10rM|rx/oq:|xr/qo:F20F11Rm",
+  movshdup_2 =	"rmo:F30F16rM",
+  movsldup_2 =	"rmo:F30F12rM",
+  movss_2 =	"rro:F30F10rM|rx/od:|xr/do:F30F11Rm",
+  movupd_2 =	"rmo:660F10rM|mro:660F11Rm",
+  movups_2 =	"rmo:0F10rM|mro:0F11Rm",
+  orpd_2 =	"rmo:660F56rM",
+  orps_2 =	"rmo:0F56rM",
+  pabsb_2 =	"rmo:660F381CrM",
+  pabsd_2 =	"rmo:660F381ErM",
+  pabsw_2 =	"rmo:660F381DrM",
+  packssdw_2 =	"rmo:660F6BrM",
+  packsswb_2 =	"rmo:660F63rM",
+  packuswb_2 =	"rmo:660F67rM",
+  paddb_2 =	"rmo:660FFCrM",
+  paddd_2 =	"rmo:660FFErM",
+  paddq_2 =	"rmo:660FD4rM",
+  paddsb_2 =	"rmo:660FECrM",
+  paddsw_2 =	"rmo:660FEDrM",
+  paddusb_2 =	"rmo:660FDCrM",
+  paddusw_2 =	"rmo:660FDDrM",
+  paddw_2 =	"rmo:660FFDrM",
+  palignr_3 =	"rmio:660F3A0FrMU",
+  pand_2 =	"rmo:660FDBrM",
+  pandn_2 =	"rmo:660FDFrM",
+  pause_0 =	"F390",
+  pavgb_2 =	"rmo:660FE0rM",
+  pavgw_2 =	"rmo:660FE3rM",
+  pcmpeqb_2 =	"rmo:660F74rM",
+  pcmpeqd_2 =	"rmo:660F76rM",
+  pcmpeqw_2 =	"rmo:660F75rM",
+  pcmpgtb_2 =	"rmo:660F64rM",
+  pcmpgtd_2 =	"rmo:660F66rM",
+  pcmpgtw_2 =	"rmo:660F65rM",
+  pextrw_3 =	"rri/do:660FC5rMU",
+  phaddd_2 =	"rmo:660F3802rM",
+  phaddsw_2 =	"rmo:660F3803rM",
+  phaddw_2 =	"rmo:660F3801rM",
+  phsubd_2 =	"rmo:660F3806rM",
+  phsubsw_2 =	"rmo:660F3807rM",
+  phsubw_2 =	"rmo:660F3805rM",
+  pinsrw_3 =	"rri/od:660FC4rMU|rmi/ow:",
+  pmaddubsw_2 =	"rmo:660F3804rM",
+  pmaddwd_2 =	"rmo:660FF5rM",
+  pmaxsw_2 =	"rmo:660FEErM",
+  pmaxub_2 =	"rmo:660FDErM",
+  pminsw_2 =	"rmo:660FEArM",
+  pminub_2 =	"rmo:660FDArM",
+  pmovmskb_2 =	"rr/do:660FD7rM",
+  pmulhrsw_2 =	"rmo:660F380BrM",
+  pmulhuw_2 =	"rmo:660FE4rM",
+  pmulhw_2 =	"rmo:660FE5rM",
+  pmullw_2 =	"rmo:660FD5rM",
+  pmuludq_2 =	"rmo:660FF4rM",
+  por_2 =	"rmo:660FEBrM",
+  prefetchnta_1 = "xb:n0F180m",
+  prefetcht0_1 = "xb:n0F181m",
+  prefetcht1_1 = "xb:n0F182m",
+  prefetcht2_1 = "xb:n0F183m",
+  psadbw_2 =	"rmo:660FF6rM",
+  pshufb_2 =	"rmo:660F3800rM",
+  pshufd_3 =	"rmio:660F70rMU",
+  pshufhw_3 =	"rmio:F30F70rMU",
+  pshuflw_3 =	"rmio:F20F70rMU",
+  psignb_2 =	"rmo:660F3808rM",
+  psignd_2 =	"rmo:660F380ArM",
+  psignw_2 =	"rmo:660F3809rM",
+  pslld_2 =	"rmo:660FF2rM|rio:660F726mU",
+  pslldq_2 =	"rio:660F737mU",
+  psllq_2 =	"rmo:660FF3rM|rio:660F736mU",
+  psllw_2 =	"rmo:660FF1rM|rio:660F716mU",
+  psrad_2 =	"rmo:660FE2rM|rio:660F724mU",
+  psraw_2 =	"rmo:660FE1rM|rio:660F714mU",
+  psrld_2 =	"rmo:660FD2rM|rio:660F722mU",
+  psrldq_2 =	"rio:660F733mU",
+  psrlq_2 =	"rmo:660FD3rM|rio:660F732mU",
+  psrlw_2 =	"rmo:660FD1rM|rio:660F712mU",
+  psubb_2 =	"rmo:660FF8rM",
+  psubd_2 =	"rmo:660FFArM",
+  psubq_2 =	"rmo:660FFBrM",
+  psubsb_2 =	"rmo:660FE8rM",
+  psubsw_2 =	"rmo:660FE9rM",
+  psubusb_2 =	"rmo:660FD8rM",
+  psubusw_2 =	"rmo:660FD9rM",
+  psubw_2 =	"rmo:660FF9rM",
+  punpckhbw_2 =	"rmo:660F68rM",
+  punpckhdq_2 =	"rmo:660F6ArM",
+  punpckhqdq_2 = "rmo:660F6DrM",
+  punpckhwd_2 =	"rmo:660F69rM",
+  punpcklbw_2 =	"rmo:660F60rM",
+  punpckldq_2 =	"rmo:660F62rM",
+  punpcklqdq_2 = "rmo:660F6CrM",
+  punpcklwd_2 =	"rmo:660F61rM",
+  pxor_2 =	"rmo:660FEFrM",
+  rcpps_2 =	"rmo:0F53rM",
+  rcpss_2 =	"rmo:F30F53rM",
+  rsqrtps_2 =	"rmo:0F52rM",
+  rsqrtss_2 =	"rmo:F30F52rM",
+  sfence_0 =	"0FAEF8",
+  shufpd_3 =	"rmio:660FC6rMU",
+  shufps_3 =	"rmio:0FC6rMU",
+  stmxcsr_1 =   "xd:0FAE3m",
+  ucomisd_2 =	"rmo:660F2ErM",
+  ucomiss_2 =	"rmo:0F2ErM",
+  unpckhpd_2 =	"rmo:660F15rM",
+  unpckhps_2 =	"rmo:0F15rM",
+  unpcklpd_2 =	"rmo:660F14rM",
+  unpcklps_2 =	"rmo:0F14rM",
+  xorpd_2 =	"rmo:660F57rM",
+  xorps_2 =	"rmo:0F57rM",
 }
 
 ------------------------------------------------------------------------------
@@ -947,11 +1176,11 @@ for name,n in pairs{ add = 0, mul = 1, com = 2, comp = 3,
   local nc = 192 + n * 8
   local nr = nc + (n < 4 and 0 or (n % 2 == 0 and 8 or -8))
   local fn = "f"..name
-  map_op[fn.."_1"] = format("ff:D8%02Xr|xdq:D8%Xm", nc, n)
+  map_op[fn.."_1"] = format("ff:D8%02Xr|xd:D8%Xm|xq:DC%Xm", nc, n, n)
   if n == 2 or n == 3 then
-    map_op[fn.."_2"] = format("Fff:D8%02XR|Fx2dq:D8%XM", nc, n)
+    map_op[fn.."_2"] = format("Fff:D8%02XR|Fx2d:D8%XM|Fx2q:DC%XM", nc, n, n)
   else
-    map_op[fn.."_2"] = format("Fff:D8%02XR|fFf:DC%02Xr|Fx2dq:D8%XM", nc, nr, n)
+    map_op[fn.."_2"] = format("Fff:D8%02XR|fFf:DC%02Xr|Fx2d:D8%XM|Fx2q:DC%XM", nc, nr, n, n)
     map_op[fn.."p_1"] = format("ff:DE%02Xr", nr)
     map_op[fn.."p_2"] = format("fFf:DE%02Xr", nr)
   end
@@ -966,22 +1195,14 @@ for cc,n in pairs{ b=0, e=1, be=2, u=3, nb=4, ne=5, nbe=6, nu=7 } do
   map_op["fcmov"..cc.."_2"] = format("Fff:%04XR", nc) -- P6+
 end
 
--- Hand code movzx, movsx. Templates do not support mixed operand sizes (yet).
-function map_op.movzx_2(params)
-  if not params then return "reg, mrm" end
-  local opcode = params.op == "movzx" and 4023 or 4031
-  local d = parseoperand(params[1])
-  local s = parseoperand(params[2])
-  local sz = (d.opsize or "")..(s.opsize or "")
-  if match(d.mode, "r") and match(s.mode, "m") and
-     (sz == "dw" or sz == "db" or sz == "wb") then
-    wputop(d.opsize, s.opsize == "b" and opcode-1 or opcode)
-    wputmrmsib(s, d.reg)
-  else
-    werror("bad operand mode in `"..opmodestr(params.op, {d, s}).."'")
-  end
+-- SSE FP arithmetic ops.
+for name,n in pairs{ sqrt = 1, add = 8, mul = 9,
+		     sub = 12, min = 13, div = 14, max = 15 } do
+  map_op[name.."ps_2"] = format("rmo:0F5%XrM", n)
+  map_op[name.."ss_2"] = format("rro:F30F5%XrM|rx/od:", n)
+  map_op[name.."pd_2"] = format("rmo:660F5%XrM", n)
+  map_op[name.."sd_2"] = format("rro:F20F5%XrM|rx/oq:", n)
 end
-map_op.movsx_2 = map_op.movzx_2
 
 ------------------------------------------------------------------------------
 
@@ -1047,7 +1268,7 @@ local function dopattern(pat, args, sz, op)
 	  end
 	elseif c == "J" then
 	  if mode == "iPJ" then
-	    waction("REL_G", imm) -- !x64 (secpos)
+	    waction("REL_A", imm) -- !x64 (secpos)
 	  else
 	    wputlabel("REL_", imm, 2)
 	  end
@@ -1113,21 +1334,28 @@ map_op[".template__"] = function(params, template, nparams)
   end
 
   -- Try all match:pattern pairs (separated by '|').
-  local gotmatch
+  local gotmatch, lastpat
   for tm in gmatch(template, "[^%|]+") do
+    -- Split off size match (starts after mode match) and pattern string.
+    local szm, pat = match(tm, "^(.-):(.*)$", #args+1)
+    if pat == "" then pat = lastpat else lastpat = pat end
     if matchtm(tm, args) then
-      -- Split off size match (starts after mode match) and pattern string.
-      local szm, pat = match(tm, "^(.-):(.*)$", #args+1)
-      if szm == "" then szm = "dwb" end -- Default size match.
-      local szp = sz
       local prefix = sub(szm, 1, 1)
-      if prefix == "1" then szp = args[1].opsize; szmix = nil
-      elseif prefix == "2" then szp = args[2].opsize; szmix = nil end
-      -- Match operand size.
-      if not szmix and (prefix == "." or match(szm, szp or "#")) then
-	-- Process pattern string.
-	dopattern(pat, args, szp, params.op)
-	return
+      if prefix == "/" then -- Match both operand sizes.
+	if args[1].opsize == sub(szm, 2, 2) and
+	   args[2].opsize == sub(szm, 3, 3) then
+	  dopattern(pat, args, sz, params.op) -- Process pattern string.
+	  return
+	end
+      else -- Match common operand size.
+	local szp = sz
+	if szm == "" then szm = "dwb" end -- Default size match.
+	if prefix == "1" then szp = args[1].opsize; szmix = nil
+	elseif prefix == "2" then szp = args[2].opsize; szmix = nil end
+	if not szmix and (prefix == "." or match(szm, szp or "#")) then
+	  dopattern(pat, args, szp, params.op) -- Process pattern string.
+	  return
+	end
       end
       gotmatch = true
     end
@@ -1170,32 +1398,56 @@ map_op[".aword_*"] = op_data
 
 ------------------------------------------------------------------------------
 
--- Label pseudo-opcode (converted from trailing colon form).
-map_op[".label_1"] = function(params)
-  if not params then return "[1-9] | ->pc" end
-  local a = parseoperand(params[1])
-  local mode, imm = a.mode, a.imm
-  if type(imm) == "number" then
-    if imm >= 1 and imm <= 9 then
-      -- Local label (1: ... 9:).
-      waction("LABEL_L", nil, 1)
-      wputxb(imm)
-      return
-    end
-  elseif mode == "iJ" then
-    -- PC label (->expr:).
-    waction("LABEL_P", imm)
-    return
-  end
-  werror("bad label definition")
+-- Pseudo-opcode to mark the position where the action list is to be emitted.
+map_op[".actionlist_1"] = function(params)
+  if not params then return "cvar" end
+  local name = params[1] -- No syntax check. You get to keep the pieces.
+  wline(function(out) writeactions(out, name) end)
+end
+
+-- Pseudo-opcode to mark the position where the global enum is to be emitted.
+map_op[".globals_1"] = function(params)
+  if not params then return "prefix" end
+  local prefix = params[1] -- No syntax check. You get to keep the pieces.
+  wline(function(out) writeglobals(out, prefix) end)
 end
 
 ------------------------------------------------------------------------------
 
+-- Label pseudo-opcode (converted from trailing colon form).
+map_op[".label_2"] = function(params)
+  if not params then return "[1-9] | ->global | =>pcexpr  [, addr]" end
+  local a = parseoperand(params[1])
+  local mode, imm = a.mode, a.imm
+  if type(imm) == "number" and (mode == "iJ" or (imm >= 1 and imm <= 9)) then
+    -- Local label (1: ... 9:) or global label (->global:).
+    waction("LABEL_LG", nil, 1)
+    wputxb(imm)
+  elseif mode == "iJ" then
+    -- PC label (=>pcexpr:).
+    waction("LABEL_PC", imm)
+  else
+    werror("bad label definition")
+  end
+  -- SETLABEL must immediately follow LABEL_LG/LABEL_PC.
+  local addr = params[2]
+  if addr then
+    local a = parseoperand(params[2])
+    if a.mode == "iPJ" then
+      waction("SETLABEL", a.imm) -- !x64 (secpos)
+    else
+      werror("bad label assignment")
+    end
+  end
+end
+map_op[".label_1"] = map_op[".label_2"]
+
+------------------------------------------------------------------------------
+
 -- Alignment pseudo-opcode.
-map_op[".align_1"] = function( params)
+map_op[".align_1"] = function(params)
   if not params then return "numpow2" end
-  local align = tonumber(params[1])
+  local align = tonumber(params[1]) or map_opsizenum[map_opsize[params[1]]]
   if align then
     local x = align
     -- Must be a power of 2 in the range (2 ... 256).
@@ -1210,6 +1462,19 @@ map_op[".align_1"] = function( params)
   end
   werror("bad alignment")
 end
+
+-- Spacing pseudo-opcode.
+map_op[".space_2"] = function(params)
+  if not params then return "num [, filler]" end
+  waction("SPACE", params[1])
+  local fill = params[2]
+  if fill then
+    fill = tonumber(fill)
+    if not fill or fill < 0 or fill > 255 then werror("bad filler") end
+  end
+  wputxb(fill or 0)
+end
+map_op[".space_1"] = map_op[".space_2"]
 
 ------------------------------------------------------------------------------
 
@@ -1279,6 +1544,7 @@ end
 -- Dump all user defined elements.
 function _M.dumpdef(out, lvl)
   dumptypes(out, lvl)
+  dumpglobals(out, lvl)
 end
 
 ------------------------------------------------------------------------------

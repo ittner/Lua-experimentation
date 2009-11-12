@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.182 2005/08/26 17:36:32 roberto Exp $
+** $Id: lbaselib.c,v 1.189 2006/01/18 11:49:12 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,9 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+#ifndef COCO_DISABLE
+#include "lcoco.h"
+#endif
 
 
 
@@ -196,9 +199,23 @@ static int luaB_collectgarbage (lua_State *L) {
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL};
   int o = luaL_checkoption(L, 1, "collect", opts);
-  int ex = luaL_optinteger(L, 2, 0);
-  lua_pushinteger(L, lua_gc(L, optsnum[o], ex));
-  return 1;
+  int ex = luaL_optint(L, 2, 0);
+  int res = lua_gc(L, optsnum[o], ex);
+  switch (optsnum[o]) {
+    case LUA_GCCOUNT: {
+      int b = lua_gc(L, LUA_GCCOUNTB, 0);
+      lua_pushnumber(L, res + ((lua_Number)b/1024));
+      return 1;
+    }
+    case LUA_GCSTEP: {
+      lua_pushboolean(L, res);
+      return 1;
+    }
+    default: {
+      lua_pushnumber(L, res);
+      return 1;
+    }
+  }
 }
 
 
@@ -326,12 +343,10 @@ static int luaB_assert (lua_State *L) {
 
 
 static int luaB_unpack (lua_State *L) {
-  int i = luaL_optint(L, 2, 1);
-  int e = luaL_optint(L, 3, -1);
-  int n;
+  int i, e, n;
   luaL_checktype(L, 1, LUA_TTABLE);
-  if (e == -1)
-    e = luaL_getn(L, 1);
+  i = luaL_optint(L, 2, 1);
+  e = luaL_opt(L, luaL_checkint, 3, luaL_getn(L, 1));
   n = e - i + 1;  /* number of elements */
   if (n <= 0) return 0;  /* empty range */
   luaL_checkstack(L, n, "table too big to unpack");
@@ -349,8 +364,9 @@ static int luaB_select (lua_State *L) {
   }
   else {
     int i = luaL_checkint(L, 1);
-    if (i <= 0) i = 1;
-    else if (i >= n) i = n;
+    if (i < 0) i = n + i;
+    else if (i > n) i = n;
+    luaL_argcheck(L, 1 <= i, 1, "index out of range");
     return n - i;
   }
 }
@@ -464,7 +480,6 @@ static const luaL_Reg base_funcs[] = {
 ** =======================================================
 */
 
-#ifdef COCO_DISABLE
 static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg))
@@ -522,10 +537,27 @@ static int luaB_auxwrap (lua_State *L) {
 }
 
 
+#ifndef COCO_DISABLE
+static int luaB_cstacksize (lua_State *L)
+{
+  lua_pushinteger(L, luaCOCO_cstacksize(luaL_optint(L, 1, -1)));
+  return 1;
+}
+#endif
+
+
 static int luaB_cocreate (lua_State *L) {
+#ifdef COCO_DISABLE
   lua_State *NL = lua_newthread(L);
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
+#else
+  int cstacksize = luaL_optint(L, 2, 0);
+  lua_State *NL = lua_newcthread(L, cstacksize);
+  luaL_argcheck(L, lua_isfunction(L, 1) &&
+                   (cstacksize >= 0 ? 1 : !lua_iscfunction(L, 1)),
+                1, "Lua function expected");
+#endif
   lua_pushvalue(L, 1);  /* move function to top */
   lua_xmove(L, NL, 1);  /* move function from L to NL */
   return 1;
@@ -542,7 +574,6 @@ static int luaB_cowrap (lua_State *L) {
 static int luaB_yield (lua_State *L) {
   return lua_yield(L, lua_gettop(L));
 }
-#endif
 
 
 static int luaB_costatus (lua_State *L) {
@@ -562,7 +593,7 @@ static int luaB_costatus (lua_State *L) {
             lua_pushliteral(L, "dead");
         else
           lua_pushliteral(L, "suspended");  /* initial state */
-        break;  
+        break;
       }
       default:  /* some error occured */
         lua_pushliteral(L, "dead");
@@ -582,14 +613,15 @@ static int luaB_corunning (lua_State *L) {
 
 
 static const luaL_Reg co_funcs[] = {
-#ifdef COCO_DISABLE
   {"create", luaB_cocreate},
   {"resume", luaB_coresume},
-  {"wrap", luaB_cowrap},
-  {"yield", luaB_yield},
-#endif
   {"running", luaB_corunning},
   {"status", luaB_costatus},
+  {"wrap", luaB_cowrap},
+  {"yield", luaB_yield},
+#ifndef COCO_DISABLE
+  {"cstacksize", luaB_cstacksize},
+#endif
   {NULL, NULL}
 };
 
@@ -605,33 +637,34 @@ static void auxopen (lua_State *L, const char *name,
 
 
 static void base_open (lua_State *L) {
+  /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  luaL_register(L, NULL, base_funcs);  /* open lib into global table */
+  lua_setglobal(L, "_G");
+  /* open lib into global table */
+  luaL_register(L, "_G", base_funcs);
   lua_pushliteral(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");  /* set global _VERSION */
   /* `ipairs' and `pairs' need auxliliary functions as upvalues */
   auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
   auxopen(L, "pairs", luaB_pairs, luaB_next);
   /* `newproxy' needs a weaktable as upvalue */
-  lua_newtable(L);  /* new table `w' */
+  lua_createtable(L, 0, 1);  /* new table `w' */
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */
   lua_setmetatable(L, -2);
   lua_pushliteral(L, "kv");
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
   lua_setglobal(L, "newproxy");  /* set global `newproxy' */
-  /* create register._LOADED to track loaded modules */
-  lua_newtable(L);
-  lua_setfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  /* set global _G */
-  lua_pushvalue(L, LUA_GLOBALSINDEX);
-  lua_setglobal(L, "_G");
 }
 
 
 LUALIB_API int luaopen_base (lua_State *L) {
   base_open(L);
   luaL_register(L, LUA_COLIBNAME, co_funcs);
+#ifndef COCO_DISABLE
+  lua_pushboolean(L, 1); 
+  lua_setfield(L, -2, "coco");
+#endif
   return 2;
 }
 

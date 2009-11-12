@@ -4,7 +4,7 @@
 <title>Introducing LuaJIT</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
 <meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005, Mike Pall" />
+<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
 <meta name="Language" content="en" />
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
@@ -44,6 +44,8 @@
 <a href="coco_portability.html">Portability</a>
 </li><li>
 <a href="coco_api.html">API Extensions</a>
+</li><li>
+<a href="coco_changes.html">Changes</a>
 </li></ul>
 </li><li>
 <a href="dynasm.html">DynASM</a>
@@ -70,10 +72,6 @@ your way around LuaJIT's inner workings.
 The learning curve is maybe a little bit steep for newbies and
 compiler gurus will certainly fall asleep after two paragraphs.
 It's difficult to strike a balance here.
-</p>
-<p>
-This text is nowhere near finished, too. But I really want to get
-LuaJIT out ...
 </p>
 
 <h2>Acronym Soup</h2>
@@ -319,7 +317,7 @@ And more importantly 'k' can be a number, a string
 or any other type. Oh and let's not forget about metamethods ...
 </p>
 <p>
-If you know a bit about the Lua core it should be clear by now
+If you know a bit about Lua internals, it should be clear by now
 that the code for this function could potentially branch to half
 of the Lua core. And it's of course impossible to inline all
 these cases.
@@ -381,7 +379,7 @@ Thank you for your attention!
 </div>
 <div id="foot">
 <hr class="hide" />
-Copyright &copy; 2005 Mike Pall
+Copyright &copy; 2005-2006 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

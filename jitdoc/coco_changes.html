@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html>
 <head>
-<title>LuaJIT</title>
+<title>Coco Change History</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
 <meta name="Author" content="Mike Pall" />
 <meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
@@ -14,13 +14,13 @@
 <a href="http://luajit.luaforge.net/"><span>Lua<span id="logo">JIT</span></span></a>
 </div>
 <div id="head">
-<h1>LuaJIT</h1>
+<h1>Coco Change History</h1>
 </div>
 <div id="nav">
 <ul><li>
 <a href="index.html">Index</a>
 </li><li>
-<a class="current" href="luajit.html">LuaJIT</a>
+<a href="luajit.html">LuaJIT</a>
 <ul><li>
 <a href="luajit_features.html">Features</a>
 </li><li>
@@ -45,7 +45,7 @@
 </li><li>
 <a href="coco_api.html">API Extensions</a>
 </li><li>
-<a href="coco_changes.html">Changes</a>
+<a class="current" href="coco_changes.html">Changes</a>
 </li></ul>
 </li><li>
 <a href="dynasm.html">DynASM</a>
@@ -60,34 +60,37 @@
 </div>
 <div id="main">
 <p>
-LuaJIT is a <strong>Just-In-Time Compiler</strong> for Lua 5.1.
+This is a list of changes between the released versions of Coco.
+The current stand-alone release is <strong>Coco&nbsp;1.1.0</strong>.
 </p>
 <p>
-LuaJIT is based on <a href="http://www.lua.org/"><span class="ext">&raquo;</span>&nbsp;Lua</a>,
-a powerful, light-weight programming language.
-LuaJIT extends Lua with a JIT compiler, a set of new
-<a href="luajit_api.html">API Functions</a>, several add-on modules
-and accompanying documentation.
+Please check the
+<a href="http://luajit.luaforge.net/coco_changes.html"><span class="ext">&raquo;</span>&nbsp;Online Change History</a>
+to see whether newer versions are available.
 </p>
+
+<h2>Coco 1.1.0 &mdash; 2006-02-18</h2>
+<ul>
+<li>Upgraded to patch cleanly into Lua 5.1 (final).</li>
+<li>Added GCC inline assembler for context switching on x86 and MIPS32
+[up to 3x faster].</li>
+<li>New targets for setjmp method:
+Mac OS X/x86, Solaris/x86 and x64 and Linux/MIPS32.</li>
+<li>Workaround for WinXP problem with GetCurrentFiber().</li>
+<li>The minimum C stack size has been increased to 32K+4K.</li>
+<li>Removed <tt>lcocolib.c</tt> and integrated the (much smaller) changes
+into <tt>lbaselib.c</tt>.<br />
+Note for embedders: this means you no longer need to call
+<tt>luaopen_coco()</tt>.</li>
+<li>Optional Valgrind support requires version 3.x.
+Renamed define to USE_VALGRIND.</li>
+<li>C stacks are now registered with Valgrind.</li>
+</ul>
+
+<h2>Coco pre-release 51w6 &mdash; 2005-08-09</h2>
 <p>
-LuaJIT depends on <a href="coco.html">Coco</a> to allow yielding
-from coroutines for JIT compiled functions. Coco is part of the
-LuaJIT distribution.
-</p>
-<p>
-LuaJIT is Copyright &copy; 2005-2006 Mike Pall.
-LuaJIT is free software, released under the
-<a href="http://www.opensource.org/licenses/mit-license.php"><span class="ext">&raquo;</span>&nbsp;MIT/X license</a>
-(same license as the Lua core).
-</p>
-<h2>More ...</h2>
-<p>
-Click on the LuaJIT sub-topics in the navigation bar to learn more
-about LuaJIT.
-</p>
-<p>
-Please visit the <a href="http://luajit.luaforge.net/download.html"><span class="ext">&raquo;</span>&nbsp;Download</a> page to fetch
-the latest version of LuaJIT.
+This is the first pre-release of Coco. It targets Lua 5.1-work6 only
+and is no longer available for download.
 </p>
 <br class="flush" />
 </div>

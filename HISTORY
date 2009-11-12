@@ -1,4 +1,4 @@
-This is Lua 5.1 (alpha).
+HISTORY for Lua 5.1
 
 * Changes from version 5.0 to 5.1
   -------------------------------
@@ -14,13 +14,14 @@ This is Lua 5.1 (alpha).
   API:
   + new functions: lua_createtable, lua_get(set)field, lua_push(to)integer.
   + user supplies memory allocator (lua_open becomes lua_newstate).
+  + luaopen_* functionst must be called through Lua.
   Implementation:
   + new configuration scheme via luaconf.h.
   + incremental garbage collection.
   + better handling of end-of-line in the lexer.
   + fully reentrant parser (new Lua function `load')
-  + better support for 64-bit machines (special thanks to Mike Pall).
-  + native loadlib support for Mac OS X (thanks to Matthew Cox).
+  + better support for 64-bit machines.
+  + native loadlib support for Mac OS X.
   + standard distribution in only one library (lualib.a merged into lua.a)
 
 * Changes from version 4.0 to 5.0

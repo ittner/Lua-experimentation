@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.26 2005/08/04 13:37:38 roberto Exp $
+** $Id: ldebug.c,v 2.29 2005/12/22 16:19:56 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -36,8 +36,8 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 static int currentpc (lua_State *L, CallInfo *ci) {
   if (isLua(ci))  /* must be a Lua function to get current PC */
-    return luaJIT_currentpc(L, ci_func(ci)->l.p,
-                            ci==L->ci ? L->savedpc : ci->savedpc);
+    return luaJIT_findpc(ci_func(ci)->l.p,
+                         ci==L->ci ? L->savedpc : ci->savedpc);
   else
     return -1;
 }
@@ -63,7 +63,7 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   L->hook = func;
   L->basehookcount = count;
   resethookcount(L);
-  L->hookmask = cast(lu_byte, mask);
+  L->hookmask = cast_byte(mask);
   return 1;
 }
 
@@ -94,7 +94,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   }
   if (level == 0 && ci > L->base_ci) {  /* level found? */
     status = 1;
-    ar->i_ci = cast(int, ci - L->base_ci);
+    ar->i_ci = cast_int(ci - L->base_ci);
   }
   else if (level < 0) {  /* level is of a lost tail call? */
     status = 1;
@@ -111,40 +111,39 @@ static Proto *getluaproto (CallInfo *ci) {
 }
 
 
-LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
+static const char *findlocal (lua_State *L, CallInfo *ci, int n) {
   const char *name;
-  CallInfo *ci;
-  Proto *fp;
-  lua_lock(L);
-  name = NULL;
-  ci = L->base_ci + ar->i_ci;
-  fp = getluaproto(ci);
-  if (fp) {  /* is a Lua function? */
-    name = luaF_getlocalname(fp, n, currentpc(L, ci));
-    if (name)
-      luaA_pushobject(L, ci->base+(n-1));  /* push value */
+  Proto *fp = getluaproto(ci);
+  if (fp && (name = luaF_getlocalname(fp, n, currentpc(L, ci))) != NULL)
+    return name;  /* is a local variable in a Lua function */
+  else {
+    StkId limit = (ci == L->ci) ? L->top : (ci+1)->func;
+    if (limit - ci->base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
+      return "(*temporary)";
+    else
+      return NULL;
   }
+}
+
+
+LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
+  CallInfo *ci = L->base_ci + ar->i_ci;
+  const char *name = findlocal(L, ci, n);
+  lua_lock(L);
+  if (name)
+      luaA_pushobject(L, ci->base + (n - 1));
   lua_unlock(L);
   return name;
 }
 
 
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
-  const char *name;
-  CallInfo *ci;
-  Proto *fp;
+  CallInfo *ci = L->base_ci + ar->i_ci;
+  const char *name = findlocal(L, ci, n);
   lua_lock(L);
-  name = NULL;
-  ci = L->base_ci + ar->i_ci;
-  fp = getluaproto(ci);
-  L->top--;  /* pop new value */
-  if (fp) {  /* is a Lua function? */
-    name = luaF_getlocalname(fp, n, currentpc(L, ci));
-    if (!name || name[0] == '(')  /* `(' starts private locals */
-      name = NULL;
-    else
-      setobjs2s(L, ci->base+(n-1), L->top);
-  }
+  if (name)
+      setobjs2s(L, ci->base + (n - 1), L->top - 1);
+  L->top--;  /* pop value */
   lua_unlock(L);
   return name;
 }
@@ -323,7 +322,7 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
   last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
   check(precheck(pt));
   for (pc = 0; pc < lastpc; pc++) {
-    const Instruction i = pt->code[pc];
+    Instruction i = pt->code[pc];
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
     int b = 0;
@@ -350,7 +349,7 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
           check(0 <= dest && dest < pt->sizecode);
           if (dest > 0) {
             /* cannot jump to a setlist count */
-            const Instruction d = pt->code[dest-1];
+            Instruction d = pt->code[dest-1];
             check(!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0));
           }
         }
@@ -553,7 +552,7 @@ void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *name = NULL;
   const char *t = luaT_typenames[ttype(o)];
   const char *kind = (isinstack(L->ci, o)) ?
-                         getobjname(L, L->ci, cast(int, o - L->base), &name) :
+                         getobjname(L, L->ci, cast_int(o - L->base), &name) :
                          NULL;
   if (kind)
     luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",

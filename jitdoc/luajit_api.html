@@ -4,7 +4,7 @@
 <title>LuaJIT API Extensions</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
 <meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005, Mike Pall" />
+<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
 <meta name="Language" content="en" />
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
@@ -48,6 +48,8 @@ tr.sthead td { font-weight: bold; }
 <a href="coco_portability.html">Portability</a>
 </li><li>
 <a href="coco_api.html">API Extensions</a>
+</li><li>
+<a href="coco_changes.html">Changes</a>
 </li></ul>
 </li><li>
 <a href="dynasm.html">DynASM</a>
@@ -64,12 +66,6 @@ tr.sthead td { font-weight: bold; }
 <p>
 LuaJIT provides several new API functions organized into two
 libraries.
-</p>
-<p>
-Note that if you are embedding LuaJIT, you need to add the LuaJIT
-library functions with luaopen_jit() just like the other standard
-library functions. The modified linit.c used by the stand-alone
-executable already does that for you.
 </p>
 <p>
 LuaJIT includes Coco &mdash; so have a look at the
@@ -108,8 +104,8 @@ jit.off()</tt></h3>
 Turns the JIT engine on (default) or off.
 </p>
 <p>
-These two library functions are typically used with the <tt>-j</tt>
-command line option (<tt>-j on</tt> or <tt>-j off</tt>).
+These functions are typically used with the command line options
+<tt>-j on</tt> or <tt>-j off</tt>.
 </p>
 
 <h3 id="jit_onoff_func"><tt>jit.on(func|true [,true|false])<br />
@@ -125,8 +121,8 @@ enabled/disabled recursively for all subfunctions of a function.
 With <tt>false</tt> only the subfunctions are affected.
 </p>
 <p>
-Both library functions only set a flag that will be checked when
-the function is to be executed for the first/next time. They do not
+Both library functions only set a flag which is checked when
+the function is executed for the first/next time. They do not
 trigger immediate compilation.
 </p>
 <p>
@@ -195,25 +191,42 @@ Note that some compiler optimizations are turned off when
 debugging is enabled.
 </p>
 <p>
-This library function is typically used with the <tt>-j</tt>
-command line option (<tt>-j debug</tt> or <tt>-j debug=level</tt>).
+This function is typically used with the command line options
+<tt>-j debug</tt> or <tt>-j debug=level</tt>.
 </p>
 
 <h3 id="jit_attach"><tt>jit.attach(handler [, priority])</tt></h3>
 <p>
 Attach a handler to the compiler pipeline with the given priority.
-If no priority is given the handler is detached.
+The handler is detached if no priority is given.
 </p>
 <p>
 The inner workings of the compiler pipeline and the API for handlers
 are still in flux. Please see the source code for more details.
 </p>
 
+<h3 id="jit_version"><tt>jit.version</tt></h3>
+<p>
+Contains the LuaJIT version string.
+</p>
+
+<h3 id="jit_version_num"><tt>jit.version_num</tt></h3>
+<p>
+Contains the version number of the LuaJIT core. Version xx.yy.zz
+is represented by the decimal number xxyyzz.
+</p>
+
+<h3 id="jit_arch"><tt>jit.arch</tt></h3>
+<p>
+Contains the target architecture name (CPU and optional ABI).
+</p>
+
 
 <h2 id="jit_util">The jit.util.* Library</h2>
 <p>
 This library holds many utility functions used by the provided
-extension modules for LuaJIT (e.g. the optimizer).
+extension modules for LuaJIT (e.g. the optimizer). The API may
+change in future versions.
 </p>
 
 <h3 id="jit_util_stats"><tt>stats = jit.util.stats(func)</tt></h3>
@@ -277,19 +290,6 @@ Returns an upvalue from the array of upvalues for a Lua function.
 is returned. Upvalues are numbered starting with 0.
 </p>
 
-<h3 id="jit_util_closure"><tt>subfunc = jit.util.closure(func, idx [, upvalues...])</tt></h3>
-<p>
-Creates a new closure from the subfunction prototype with the
-given index <tt>idx</tt> for a Lua function. Nothing is returned
-if <tt>idx</tt> is out of range. Subfunctions are numbered starting
-with 0.
-</p>
-<p>
-The (closed) upvalues of the newly created function are initialized
-with the passed <tt>upvalues</tt> or with <tt>nil</tt>.
-The function environment is inherited from the given Lua function.
-</p>
-
 <h3 id="jit_util_closurenup"><tt>nup = jit.util.closurenup(func, idx)</tt></h3>
 <p>
 Returns the number of upvalues for the subfunction prototype with
@@ -298,27 +298,36 @@ if <tt>idx</tt> is out of range. Subfunctions are numbered starting
 with 0.
 </p>
 
-<h3 id="jit_util_mcode"><tt>mcode, addr = jit.util.mcode(func)</tt></h3>
+<h3 id="jit_util_mcode"><tt>addr, mcode, mfmiter = jit.util.mcode(func, block])</tt></h3>
 <p>
-Returns the compiled machine code (converted to a string) and
-its numeric start address for a Lua function. Returns <tt>nil</tt>
-and a numeric status code (see <tt>jit.util.status</tt>) if
-the function has not been compiled yet or compilation has failed
-or compilation is disabled.
+Returns the numeric start address, the compiled machine code
+(converted to a string) and an iterator for the machine code fragment map
+for the specified machine code block associated with a Lua function.
+</p>
+<p>
+Returns <tt>nil</tt> and a numeric status code (see <tt>jit.util.status</tt>)
+if the function has not been compiled yet or compilation has failed
+or compilation is disabled. Returns nothing if the selected
+machine code block does not exist.
+</p>
+<p>
+The machine code fragment map is used for debugging and error handling.
+The format may change between versions and is an internal implementation
+detail of LuaJIT.
 </p>
 
-<h3 id="jit_util_mcodeaddr"><tt>addr = jit.util.mcodeaddr(func, pc)</tt></h3>
+<h3 id="jit_util_jsubmcode"><tt>addr [, mcode] = jit.util.jsubmcode([idx])</tt></h3>
 <p>
-Returns the start address of the machine code for a Lua function
-that corresponds to the bytecode instruction at the given <tt>pc</tt>.
-Nothing is returned if the function has not been compiled (yet) or
-if <tt>pc</tt> is out of range.
+If <tt>idx</tt> is omitted or nil:
+Returns the numeric start address and the compiled machine code
+(converted to a string) for internal subroutines used by the
+compiled machine code.
 </p>
-
-<h3 id="jit_util_jsubmcode"><tt>mcode, addr = jit.util.jsubmcode()</tt></h3>
 <p>
-Returns the machine code (converted to a string) and its numeric start
-address for internal subroutines used by the compiled machine code.
+If <tt>idx</tt> is given:
+Returns the numeric start address of the machine code for a specific
+internal subroutine (0&nbsp;based). Nothing is returned if <tt>idx</tt> is
+out of range.
 </p>
 
 <h3 id="jit_util_status"><tt>jit.util.status</tt></h3>
@@ -344,14 +353,14 @@ jit.util.fhints</tt></h3>
 These two tables map compiler hint names to internal hint numbers.
 </p>
 <p>
-The hint system is still in flux. Please see the source code
-for more details.
+The hint system is an internal implementation detail of LuaJIT.
+Please see the source code for more info.
 </p>
 <br class="flush" />
 </div>
 <div id="foot">
 <hr class="hide" />
-Copyright &copy; 2005 Mike Pall
+Copyright &copy; 2005-2006 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

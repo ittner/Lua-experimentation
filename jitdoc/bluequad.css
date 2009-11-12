@@ -1,4 +1,4 @@
-/* Copyright (C) 2004-2005 Mike Pall.
+/* Copyright (C) 2004-2006 Mike Pall.
  *
  * You are welcome to use the general ideas of this design for your own sites.
  * But please do not steal the stylesheet, the layout or the color scheme.
@@ -127,6 +127,9 @@ tr {
 tr.odd {
   background: #f0f4ff;
 }
+tr.separate td {
+  border-top: 1px solid #bfcfff;
+}
 td {
   text-align: left;
   margin: 0;
@@ -160,11 +163,11 @@ img {
 img.left {
   float: left;
   margin: 0.5em 1em 0.5em 0;
-}  
+}
 img.right {
   float: right;
   margin: 0.5em 0 0.5em 1em;
-}  
+}
 .flush {
   clear: both;
   visibility: hidden;
@@ -205,7 +208,7 @@ img.right {
   margin: 0;
   padding: 0 0 0 2em;
   border-left: solid 13em #4162bf;
-  border-right: solid 6em #6078bf;
+  border-right: solid 3em #6078bf;
   background: #6078bf;
   color: #e6ecff;
 }
@@ -253,7 +256,7 @@ img.right {
   color: #2142bf;
 }
 #nav ul ul a {
-  padding: 0 2em;
+  padding: 0 1em 0 2em;
 }
 #main {
   line-height: 1.5;

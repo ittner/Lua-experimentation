@@ -4,7 +4,7 @@
 <title>Debugging LuaJIT</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
 <meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005, Mike Pall" />
+<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
 <meta name="Language" content="en" />
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
@@ -44,6 +44,8 @@
 <a href="coco_portability.html">Portability</a>
 </li><li>
 <a href="coco_api.html">API Extensions</a>
+</li><li>
+<a href="coco_changes.html">Changes</a>
 </li></ul>
 </li><li>
 <a href="dynasm.html">DynASM</a>
@@ -79,6 +81,7 @@ Try to run your application in several different ways:
 </p>
 <ul>
 <li><tt>luajit app.lua</tt></li>
+<li><tt>luajit -O1 app.lua</tt></li>
 <li><tt>luajit -O app.lua</tt></li>
 <li><tt>luajit -j off app.lua</tt></li>
 <li><tt>lua app.lua</tt> (i.e. with standard Lua)</li>
@@ -86,10 +89,10 @@ Try to run your application in several different ways:
 <p>
 If the behaviour is the <em>same</em> as with standard Lua then ...
 well ... that's what LuaJIT is about: doing the same things,
-just faster.
+just faster. Even bugs fly faster. :-)
 </p>
 <p>
-This is most likely a bug in your application. It may be easier
+So this is most likely a bug in your application then. It may be easier
 to debug this with plain Lua &mdash; the remainder of this page
 is probably not helpful for you.
 </p>
@@ -150,7 +153,7 @@ Well &mdash; if you are brave enough. :-)
 You may want to have a look at the output of <tt>-j dumphints</tt>
 first. Try to change things around until you can see which hint
 or which instruction is the cause of the bug. If you suspect
-an optimizer bug then have a look at the backend (<tt>*.dasc</tt>)
+an optimizer bug then have a look at the backend (<tt>*.das[ch]</tt>)
 and check how the hint is encoded.
 </p>
 <p>
@@ -162,11 +165,11 @@ It's helpful to have a good knowledge of assembler, though
 
 <h2>Locate a Crash</h2>
 <p>
-If you get a crash you should compile LuaJIT with debugging
+If you get a crash, you should compile LuaJIT with debugging
 turned on:
 </p>
 <p>
-Add <tt>-g</tt> to <tt>MYCFLAGS</tt> and <tt>MYLDFLAGS</tt>
+Add <tt>-g</tt> to <tt>CFLAGS</tt> and <tt>MYLDFLAGS</tt>
 or whatever is needed to turn on debugging. For Windows you
 need both an executable and a DLL built with debugging.
 </p>
@@ -183,29 +186,37 @@ displayed in your debugger (this is really hard to solve).
 
 <h2>Turn on Assertions</h2>
 <p>
-Another way to debug LuaJIT is to turn on all assertions:
-Search for <tt>lua_assert</tt> in <tt>src/luaconf.h</tt>
-and add/change:<br />
+Another way to debug LuaJIT is to turn on assertions.
+They can be turned on only for the JIT engine by adding
+<tt>-DLUAJIT_ASSERT</tt> to <tt>ITCFLAGS</tt> in <tt>src/Makefile</tt>.
+Then recompile with <tt>make&nbsp;clean</tt> and <tt>make</tt>.
+</p>
+<p>
+Add these two lines to <tt>src/luaconf.h</tt> to turn on all assertions in the Lua core:<br />
 <tt>&nbsp;&nbsp;#include &lt;assert.h&gt;</tt><br />
 <tt>&nbsp;&nbsp;#define lua_assert(x) assert(x)</tt><br />
+This turns on the JIT engine assertions, too.
 Recompile and see whether any assertions trigger.
+Don't forget to turn off the (slow) assertions when you're done!
 </p>
 
 <h2>Use Valgrind</h2>
 <p>
 A tremendously useful (and free) tool for runtime code analysis
-is <a href="http://valgrind.org/"><span class="ext">&raquo;</span>&nbsp;valgrind</a>. Regularly
+is <a href="http://valgrind.org/"><span class="ext">&raquo;</span>&nbsp;Valgrind</a>. Regularly
 run your applications with <tt>valgrind --memcheck</tt> and
 your life will be better.
 </p>
 <p>
-To run LuaJIT under valgrind you <em>must</em> add
-<tt>-DLUAJIT_USE_VALGRIND</tt> to <tt>MYCFLAGS</tt>
+To run LuaJIT under Valgrind you <em>must</em> add
+<tt>-DUSE_VALGRIND</tt> to <tt>MYCFLAGS</tt>
 and recompile LuaJIT. You will get random errors if you don't!
+Valgrind 3.x or later is required. Earlier versions
+do not work well with newly allocated C stacks.
 </p>
 <p>
-An executable built with this option runs fine without valgrind
-and without a performance loss. But it needs the valgrind header
+An executable built with this option runs fine without Valgrind
+and without a performance loss. But it needs the Valgrind header
 files for compilation (which is why it's not enabled by default).
 </p>
 <p>
@@ -213,7 +224,7 @@ It's helpful to compile LuaJIT with debugging turned on, too
 (see above).
 </p>
 <p>
-If valgrind spots many invalid memory accesses that involve
+If Valgrind spots many invalid memory accesses that involve
 memory allocation/free functions you've probably found a bug
 related to garbage collection. Some object reference must have
 gone astray.
@@ -252,7 +263,7 @@ and fixing bugs!
 </div>
 <div id="foot">
 <hr class="hide" />
-Copyright &copy; 2005 Mike Pall
+Copyright &copy; 2005-2006 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

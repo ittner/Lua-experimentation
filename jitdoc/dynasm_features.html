@@ -4,7 +4,7 @@
 <title>DynASM Features</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
 <meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005, Mike Pall" />
+<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
 <meta name="Language" content="en" />
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
@@ -44,6 +44,8 @@
 <a href="coco_portability.html">Portability</a>
 </li><li>
 <a href="coco_api.html">API Extensions</a>
+</li><li>
+<a href="coco_changes.html">Changes</a>
 </li></ul>
 </li><li>
 <a href="dynasm.html">DynASM</a>
@@ -88,10 +90,11 @@ you come to expect from a standard assembler.</li>
 <li>Access to C&nbsp;variables and CPP defines in assembler statements.</li>
 <li>Access to C&nbsp;structures and unions via type mapping.</li>
 <li>Convenient shortcuts for accessing C&nbsp;structures.</li>
-<li>Local labels.</li>
+<li>Local and global labels.</li>
 <li>Numbered labels (e.g. for mapping bytecode instruction numbers).</li>
 <li>Multiple code sections (e.g. for tailcode).</li>
 <li>Defines/substitutions (inline and from command line).</li>
+<li>Conditionals (translation time) with proper nesting.</li>
 <li>Macros with parameters.</li>
 <li>Macros can mix assembler statements and C&nbsp;code.</li>
 <li>Captures (output diversion for code reordering).</li>
@@ -103,9 +106,7 @@ you come to expect from a standard assembler.</li>
 Currently only a subset of x86 (i386+) instructions is supported.
 Unsupported instructions are either not usable in user-mode or
 are slow on modern CPUs (i.e. not suited for a code generator).
-The most glaring omission is SSE/SSE2 support. But this will
-probably be remedied with the planned addition of x64
-(aka x86_64, AMD64, EM64T) support.
+SSE, SSE2, SSE3 and SSE4 are fully supported. MMX is not supported.
 </p>
 <p>
 The whole toolchain has been designed to support multiple CPU
@@ -114,11 +115,10 @@ DynASM will be extended with new CPU-specific modules.
 </p>
 <p>
 The assembler itself will be extended with more features on an
-as-needed basis. E.g. I'm thinking about vararg macros or
-compile-time conditionals.
+as-needed basis. E.g. I'm thinking about vararg macros.
 </p>
 <p>
-Note that runtime-conditionals are not really needed, since you can
+Note that runtime conditionals are not really needed, since you can
 just use plain C&nbsp;code for that (and LuaJIT does this <em>a lot</em>).
 It's not going to be more (time-) efficient if conditionals are done
 by the embedded C&nbsp;library (maybe a bit more space-efficient).
@@ -129,7 +129,7 @@ by the embedded C&nbsp;library (maybe a bit more space-efficient).
 </div>
 <div id="foot">
 <hr class="hide" />
-Copyright &copy; 2005 Mike Pall
+Copyright &copy; 2005-2006 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

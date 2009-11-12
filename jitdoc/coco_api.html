@@ -4,7 +4,7 @@
 <title>Coco API Extensions</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
 <meta name="Author" content="Mike Pall" />
-<meta name="Copyright" content="Copyright (C) 2005, Mike Pall" />
+<meta name="Copyright" content="Copyright (C) 2005-2006, Mike Pall" />
 <meta name="Language" content="en" />
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print" />
@@ -44,6 +44,8 @@
 <a href="coco_portability.html">Portability</a>
 </li><li>
 <a class="current" href="coco_api.html">API Extensions</a>
+</li><li>
+<a href="coco_changes.html">Changes</a>
 </li></ul>
 </li><li>
 <a href="dynasm.html">DynASM</a>
@@ -65,12 +67,6 @@ provides a few API extensions for Lua.
 By default all your coroutines get an associated C&nbsp;stack.
 If you want to be more selective, see below.
 </p>
-<p>
-Note that if you are embedding Lua, you need to add the Coco library
-functions with luaopen_coco() just like the other standard library
-functions. The modified linit.c used by the stand-alone executable
-already does that for you.
-</p>
 
 <h2>Lua API extensions</h2>
 <p>
@@ -78,7 +74,7 @@ All <tt>coroutine.*</tt> functions should be fully upwards compatible.
 </p>
 
 <h3><tt>coroutine.coco</tt></h3>
-<p> 
+<p>
 This field is <tt>true</tt> when Coco is present (nil otherwise).
 </p>
 
@@ -143,8 +139,7 @@ or retry an I/O operation etc. And your whole C&nbsp;stack frame
 anywhere in your C&nbsp;program, even several call levels deeper.
 </p>
 <p>
-Of course all of this only works with Lua+Coco and not with standard
-Lua.
+Of course all of this only works with Lua+Coco and not with standard Lua.
 </p>
 
 <h3><tt>lua_State *lua_newcthread(lua_State *L, int cstacksize)</tt></h3>
@@ -154,7 +149,7 @@ a coroutine with an associated C&nbsp;stack directly from the C&nbsp;API.
 Other than that it works the same as <tt>lua_newthread(L)</tt>.
 </p>
 <p>
-For this prerelease you have to declare this function
+You have to declare this function as <tt>extern</tt>
 yourself, since it's not part of the official Lua API.
 This means that a C&nbsp;module that uses this call cannot
 be loaded with standard Lua. This may be intentional.
@@ -164,9 +159,10 @@ If you want your C&nbsp;module to work with both standard Lua
 and Lua+Coco you can check whether Coco is available with:
 </p>
 <pre>
-  luaL_getfield(L, LUA_GLOBALSINDEX, "coroutine.coco");
+  lua_getfield(L, LUA_GLOBALSINDEX, "coroutine");
+  lua_getfield(L, -1, "coco");
   coco_available = lua_toboolean(L, -1);
-  lua_pop(L, 1);
+  lua_pop(L, 2);
 </pre>
 <p>
 You can create coroutines with a C&nbsp;stack by calling
@@ -176,7 +172,7 @@ the Lua function <tt>coroutine.create()</tt> from C, too.
 </div>
 <div id="foot">
 <hr class="hide" />
-Copyright &copy; 2005 Mike Pall
+Copyright &copy; 2005-2006 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

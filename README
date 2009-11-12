@@ -1,15 +1,17 @@
-**********************************************************
-***                                                    ***
-*** Note: This is a MODIFIED version of Lua 5.1 alpha. ***
-*** Please read jitdoc/luajit.html first.              ***
-***                                                    ***
-*** The unmodified Lua distribution is available at:   ***
-***                                                    ***
-***   http://www.lua.org/work/lua-5.1-alpha.tar.gz     ***
-***                                                    ***
-**********************************************************
+********************************************************
+***                                                  ***
+*** Note: This is a MODIFIED version of Lua 5.1.     ***
+*** Please read jitdoc/luajit.html first.            ***
+***                                                  ***
+*** The unmodified Lua distribution is available at: ***
+***                                                  ***
+***   http://www.lua.org/ftp/lua-5.1.tar.gz          ***
+***                                                  ***
+********************************************************
 
-This is Lua 5.1 (alpha).
+README for Lua 5.1
+
+See INSTALL for installation instructions.
 See HISTORY for a summary of changes since the last released version.
 
 * What is Lua?
