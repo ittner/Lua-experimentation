@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.20 2006/01/18 11:37:34 roberto Exp $
+** $Id: lobject.h,v 2.17 2005/06/13 14:19:00 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -60,6 +60,7 @@ typedef union {
   GCObject *gc;
   void *p;
   lua_Number n;
+  int na[sizeof(lua_Number)/sizeof(ptrdiff_t)];  /* LuaJIT kludge */
   int b;
 } Value;
 
@@ -72,7 +73,7 @@ typedef union {
 
 typedef struct lua_TValue {
   TValuefields;
-} TValue;
+} LUA_TVALUE_ALIGN TValue;
 
 
 /* Macros to test type */
@@ -118,6 +119,9 @@ typedef struct lua_TValue {
 
 #define setnvalue(obj,x) \
   { TValue *i_o=(obj); i_o->value.n=(x); i_o->tt=LUA_TNUMBER; }
+
+#define chgnvalue(obj,x) \
+	check_exp(ttype(obj)==LUA_TNUMBER, (obj)->value.n=(x))
 
 #define setpvalue(obj,x) \
   { TValue *i_o=(obj); i_o->value.p=(x); i_o->tt=LUA_TLIGHTUSERDATA; }
@@ -250,6 +254,11 @@ typedef struct Proto {
   lu_byte numparams;
   lu_byte is_vararg;
   lu_byte maxstacksize;
+  /* LuaJIT extensions */
+  void *jit_mcode;  /* compiled machine code base address */
+  size_t jit_sizemcode;  /* size of compiled mcode */
+  void **jit_pcaddr;  /* map from pc to mcode address */
+  int jit_status;  /* JIT engine status code */
 } Proto;
 
 
@@ -290,7 +299,7 @@ typedef struct UpVal {
 
 #define ClosureHeader \
 	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist; \
-	struct Table *env
+	struct Table *env; lua_CFunction jit_gate
 
 typedef struct CClosure {
   ClosureHeader;
@@ -320,12 +329,9 @@ typedef union Closure {
 ** Tables
 */
 
-typedef union TKey {
-  struct {
-    TValuefields;
-    struct Node *next;  /* for chaining */
-  } nk;
-  TValue tvk;
+typedef struct TKey {
+  TValuefields;
+  struct Node *next;  /* for chaining */
 } TKey;
 
 
@@ -353,16 +359,15 @@ typedef struct Table {
 ** `module' operation for hashing (size is always a power of 2)
 */
 #define lmod(s,size) \
-	(check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1)))))
+	check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1))))
 
 
 #define twoto(x)	(1<<(x))
 #define sizenode(t)	(twoto((t)->lsizenode))
 
 
-#define luaO_nilobject		(&luaO_nilobject_)
 
-LUAI_DATA const TValue luaO_nilobject_;
+LUAI_DATA const TValue luaO_nilobject;
 
 #define ceillog2(x)	(luaO_log2((x)-1) + 1)
 

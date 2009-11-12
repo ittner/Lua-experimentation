@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.35 2005/10/06 20:46:25 roberto Exp $
+** $Id: lstate.c,v 2.33 2005/08/25 15:39:16 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,7 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
+#include "ljit.h"
 
 
 #define state_size(x)	(sizeof(x) + LUAI_EXTRASPACE)
@@ -71,13 +72,14 @@ static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
-  sethvalue(L, gt(L), luaH_new(L, 0, 2));  /* table of globals */
-  sethvalue(L, registry(L), luaH_new(L, 0, 2));  /* registry */
+  sethvalue(L, gt(L), luaH_new(L, 0, 20));  /* table of globals */
+  sethvalue(L, registry(L), luaH_new(L, 6, 20));  /* registry */
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
   g->GCthreshold = 4*g->totalbytes;
+  luaJIT_initstate(L);
 }
 
 
@@ -106,6 +108,7 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_freeall(L);  /* collect all objects */
+  luaJIT_freestate(L);
   lua_assert(g->rootgc == obj2gco(L));
   lua_assert(g->strt.nuse == 0);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
@@ -178,6 +181,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
   g->gcdept = 0;
+  g->jit_state = NULL;
   for (i=0; i<NUM_TAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
@@ -197,9 +201,8 @@ static void callallgcTM (lua_State *L, void *ud) {
 
 
 LUA_API void lua_close (lua_State *L) {
-  L = G(L)->mainthread;  /* only the main thread can be closed */
-  luai_userstateclose(L);
   lua_lock(L);
+  L = G(L)->mainthread;  /* only the main thread can be closed */
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_separateudata(L, 1);  /* separate udata that have GC metamethods */
   L->errfunc = 0;  /* no error function during GC metamethods */

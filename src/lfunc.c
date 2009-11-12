@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.12 2005/12/22 16:19:56 roberto Exp $
+** $Id: lfunc.c,v 2.11 2005/05/05 20:47:02 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,7 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
+#include "ljit.h"
 
 
 
@@ -25,7 +26,8 @@ Closure *luaF_newCclosure (lua_State *L, int nelems, Table *e) {
   luaC_link(L, obj2gco(c), LUA_TFUNCTION);
   c->c.isC = 1;
   c->c.env = e;
-  c->c.nupvalues = cast_byte(nelems);
+  c->c.nupvalues = cast(lu_byte, nelems);
+  c->c.jit_gate = G(L)->jit_gateJC;
   return c;
 }
 
@@ -35,7 +37,8 @@ Closure *luaF_newLclosure (lua_State *L, int nelems, Table *e) {
   luaC_link(L, obj2gco(c), LUA_TFUNCTION);
   c->l.isC = 0;
   c->l.env = e;
-  c->l.nupvalues = cast_byte(nelems);
+  c->l.jit_gate = G(L)->jit_gateJL;
+  c->l.nupvalues = cast(lu_byte, nelems);
   while (nelems--) c->l.upvals[nelems] = NULL;
   return c;
 }
@@ -134,11 +137,17 @@ Proto *luaF_newproto (lua_State *L) {
   f->linedefined = 0;
   f->lastlinedefined = 0;
   f->source = NULL;
+  /* LuaJIT extensions */
+  f->jit_mcode = NULL;
+  f->jit_sizemcode = 0;
+  f->jit_pcaddr = NULL;
+  f->jit_status = JIT_S_NONE;
   return f;
 }
 
 
 void luaF_freeproto (lua_State *L, Proto *f) {
+  luaJIT_freeproto(L, f);
   luaM_freearray(L, f->code, f->sizecode, Instruction);
   luaM_freearray(L, f->p, f->sizep, Proto *);
   luaM_freearray(L, f->k, f->sizek, TValue);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.24 2006/02/06 18:27:59 roberto Exp $
+** $Id: lstate.h,v 2.23 2005/07/09 13:22:34 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -12,10 +12,15 @@
 #include "lobject.h"
 #include "ltm.h"
 #include "lzio.h"
+#ifndef COCO_DISABLE
+#include "lcoco.h"
+#endif
 
 
 
 struct lua_longjmp;  /* defined in ldo.c */
+struct jit_State;  /* defined in ljit.c */
+typedef int (*luaJIT_GateLJ)(lua_State *L, StkId func, int nresults);
 
 
 /* table of globals */
@@ -26,7 +31,8 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 /* extra stack space to handle TM calls and some other extras */
-#define EXTRA_STACK   5
+/* LuaJIT uses more than the default (5) to speed up calls (setnil loop) */
+#define EXTRA_STACK   8
 
 
 #define BASIC_CI_SIZE           8
@@ -48,7 +54,7 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId base;  /* base for this function */
   StkId func;  /* function index in the stack */
-  StkId	top;  /* top for this function */
+  StkId top;  /* top for this function */
   const Instruction *savedpc;
   int nresults;  /* expected number of results from this function */
   int tailcalls;  /* number of tail calls lost under this entry */
@@ -71,9 +77,9 @@ typedef struct global_State {
   void *ud;         /* auxiliary data to `frealloc' */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
-  int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *rootgc;  /* list of all collectable objects */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
+  int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of weak tables (to be cleared) */
@@ -91,6 +97,11 @@ typedef struct global_State {
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
   struct Table *mt[NUM_TAGS];  /* metatables for basic types */
   TString *tmname[TM_N];  /* array with tag-method names */
+  /* LuaJIT extensions */
+  struct jit_State *jit_state;  /* JIT state */
+  luaJIT_GateLJ jit_gateLJ;  /* Lua -> JIT gate */
+  lua_CFunction jit_gateJL;  /* JIT -> Lua callgate */
+  lua_CFunction jit_gateJC;  /* JIT -> C callgate */
 } global_State;
 
 
@@ -100,6 +111,8 @@ typedef struct global_State {
 struct lua_State {
   CommonHeader;
   lu_byte status;
+  lu_byte hookmask;
+  int stacksize;
   StkId top;  /* first free slot in the stack */
   StkId base;  /* base of current function */
   global_State *l_G;
@@ -109,10 +122,8 @@ struct lua_State {
   StkId stack;  /* stack base */
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
-  int stacksize;
   int size_ci;  /* size of array `base_ci' */
   unsigned short nCcalls;  /* number of nested C calls */
-  lu_byte hookmask;
   lu_byte allowhook;
   int basehookcount;
   int hookcount;

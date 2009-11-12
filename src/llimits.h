@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.69 2005/12/27 17:12:00 roberto Exp $
+** $Id: llimits.h,v 1.67 2005/08/24 16:15:49 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,9 @@
 
 
 #include "lua.h"
+
+
+#define api_check	luai_apicheck
 
 
 typedef LUAI_UINT32 lu_int32;
@@ -51,19 +54,7 @@ typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
 typedef LUAI_UACNUMBER l_uacNumber;
 
 
-/* internal assertions for in-house debugging */
-#ifdef lua_assert
-
-#define check_exp(c,e)		(lua_assert(c), (e))
-#define api_check(l,e)		lua_assert(e)
-
-#else
-
-#define lua_assert(c)		((void)0)
-#define check_exp(c,e)		(e)
-#define api_check		luai_apicheck
-
-#endif
+#define check_exp(c,e)	(lua_assert(c), (e))
 
 
 #ifndef UNUSED
@@ -74,10 +65,6 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #ifndef cast
 #define cast(t, exp)	((t)(exp))
 #endif
-
-#define cast_byte(i)	cast(lu_byte, (i))
-#define cast_num(i)	cast(lua_Number, (i))
-#define cast_int(i)	cast(int, (i))
 
 
 
