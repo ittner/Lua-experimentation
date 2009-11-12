@@ -290,7 +290,7 @@ void *luaJIT_deoptimize(lua_State *L)
 /* ------------------------------------------------------------------------ */
 
 /* API function: Compile a Lua function. Pass arguments as hints. */
-int luaJIT_compile(lua_State *L, int nargs)
+LUA_API int luaJIT_compile(lua_State *L, int nargs)
 {
   StkId func;
   Table *st;
@@ -316,7 +316,7 @@ static void rec_setmode(Proto *pt, int on)
 }
 
 /* API function: Set the JIT mode for the whole engine or a function+subs. */
-int luaJIT_setmode(lua_State *L, int idx, int mode)
+LUA_API int luaJIT_setmode(lua_State *L, int idx, int mode)
 {
   jit_State *J = G(L)->jit_state;
   int mm = mode & LUAJIT_MODE_MASK;
@@ -376,6 +376,11 @@ int luaJIT_setmode(lua_State *L, int idx, int mode)
     return 0;  /* Failed. */
   }
   return 1;  /* OK. */
+}
+
+/* Enforce (dynamic) linker error for version mismatches. See lua.c. */
+LUA_API void LUAJIT_VERSION_SYM(void)
+{
 }
 
 /* ------------------------------------------------------------------------ */

@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-#define DASM_VERSION	10100	/* 1.1.0 */
+#define DASM_VERSION	10101	/* 1.1.1 */
 
 #ifndef Dst_DECL
 #define Dst_DECL	dasm_State *Dst

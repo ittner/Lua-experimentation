@@ -1,11 +1,11 @@
 /*
 ** This file has been pre-processed with DynASM.
 ** http://luajit.luaforge.net/dynasm.html
-** DynASM version 1.1.0, DynASM x86 version 1.1.0
+** DynASM version 1.1.1, DynASM x86 version 1.1.1
 ** DO NOT EDIT! The original file is in "ljit_x86.dasc".
 */
 
-#if DASM_VERSION != 10100
+#if DASM_VERSION != 10101
 #error "Version mismatch between DynASM and included encoding engine"
 #endif
 
@@ -1770,10 +1770,11 @@ static void jit_op_arith(jit_State *J, int dest, int rkb, int rkc, int ev)
   case TM_POW:
     if (hastail || !kval) break;  /* Avoid this if not optimizing. */
     if (rev) {  /* x^k for k > 0, k integer. */
+      lua_Number n = kval->n;
       int k;
-      lua_number2int(k, kval->n);
+      lua_number2int(k, n);
       /* All positive integers would work. But need to limit code explosion. */
-      if (k > 0 && k <= 65536 && (lua_Number)k == kval->n) {
+      if (k > 0 && k <= 65536 && (lua_Number)k == n) {
 	dasm_put(Dst, 3916, Dt2([idx].tt), Dt2([idx]));
 	for (; (k & 1) == 0; k >>= 1) {  /* Handle leading zeroes (2^k). */
 	  dasm_put(Dst, 3928);

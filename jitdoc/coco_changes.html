@@ -1,5 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>Coco Change History</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
@@ -61,7 +61,7 @@
 <div id="main">
 <p>
 This is a list of changes between the released versions of Coco.
-The current stand-alone release is <strong>Coco&nbsp;1.1.0</strong>.
+The current stand-alone release is <strong>Coco&nbsp;1.1.1</strong>.
 </p>
 <p>
 Please check the
@@ -69,7 +69,16 @@ Please check the
 to see whether newer versions are available.
 </p>
 
-<h2>Coco 1.1.0 &mdash; 2006-02-18</h2>
+<h2 id="Coco-1.1.1">Coco 1.1.1 &mdash; 2006-06-20</h2>
+<ul>
+<li>Upgraded to patch cleanly into Lua 5.1.1.</li>
+<li>C stacks are deallocated early: when a coroutine ends, and not when
+the coroutine object is collected. This mainly benefits Windows Fibers.</li>
+<li>Windows threads get the required Fiber context when resuming
+a coroutine and not just on creation.</li>
+</ul>
+
+<h2 id="Coco-1.1.0">Coco 1.1.0 &mdash; 2006-02-18</h2>
 <ul>
 <li>Upgraded to patch cleanly into Lua 5.1 (final).</li>
 <li>Added GCC inline assembler for context switching on x86 and MIPS32
@@ -87,7 +96,7 @@ Renamed define to USE_VALGRIND.</li>
 <li>C stacks are now registered with Valgrind.</li>
 </ul>
 
-<h2>Coco pre-release 51w6 &mdash; 2005-08-09</h2>
+<h2 id="Coco-51w6">Coco pre-release 51w6 &mdash; 2005-08-09</h2>
 <p>
 This is the first pre-release of Coco. It targets Lua 5.1-work6 only
 and is no longer available for download.

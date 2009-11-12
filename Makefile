@@ -45,9 +45,11 @@ TO_BIN= luajit
 ###TO_LIB= liblua.a
 ###TO_MAN= lua.1 luac.1
 
-# Lua and LuaJIT version. Currently used only for messages.
+# Lua version and release.
 V= 5.1
-JV= 1.1.0
+R= 5.1.1
+# LuaJIT version.
+JV= 1.1.2
 
 all:	$(PLAT)
 
@@ -65,9 +67,6 @@ install: dummy
 	###cd doc && $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
 #	$(RANLIB) $(INSTALL_LIB)/$(TO_LIB)
 	cd jit && $(INSTALL_DATA) *.lua $(INSTALL_LMOD)/jit
-
-local:
-	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -p" INSTALL_DATA="cp -p"
 
 none:
 	@echo "Please do"
@@ -105,6 +104,7 @@ echo:
 # echo private config parameters
 pecho:
 	@echo "V = $(V)"
+	@echo "R = $(R)"
 	@echo "JV = $(JV)"
 	@echo "TO_BIN = $(TO_BIN)"
 	@echo "TO_INC = $(TO_INC)"
@@ -114,8 +114,9 @@ pecho:
 # echo config parameters as Lua code
 # uncomment the last sed expression if you want nil instead of empty strings
 lecho:
-	@echo "-- installation parameters for Lua $(V), LuaJIT $(JV)"
+	@echo "-- installation parameters for Lua $(R), LuaJIT $(JV)"
 	@echo "VERSION = '$(V)'"
+	@echo "RELEASE = '$(R)'"
 	@echo "LUAJIT_VERSION = '$(JV)'"
 	@$(MAKE) echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
 	@echo "-- EOF"

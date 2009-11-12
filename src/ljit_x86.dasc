@@ -1718,10 +1718,11 @@ static void jit_op_arith(jit_State *J, int dest, int rkb, int rkc, int ev)
   case TM_POW:
     if (hastail || !kval) break;  /* Avoid this if not optimizing. */
     if (rev) {  /* x^k for k > 0, k integer. */
+      lua_Number n = kval->n;
       int k;
-      lua_number2int(k, kval->n);
+      lua_number2int(k, n);
       /* All positive integers would work. But need to limit code explosion. */
-      if (k > 0 && k <= 65536 && (lua_Number)k == kval->n) {
+      if (k > 0 && k <= 65536 && (lua_Number)k == n) {
 	|  isnumber idx; jne L_DEOPTIMIZEF
 	|  fld qword BASE[idx]
 	for (; (k & 1) == 0; k >>= 1) {  /* Handle leading zeroes (2^k). */

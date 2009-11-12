@@ -69,18 +69,19 @@
 
 typedef LPFIBER_START_ROUTINE coco_MainFunc;
 
-/* See: http://blogs.msdn.com/oldnewthing/archive/2004/12/31/344799.aspx */
 #define COCO_NEW(OL, NL, cstacksize, mainfunc) \
-  { void *cur = GetCurrentFiber(); \
-    if (cur == NULL || cur == (void *)0x1e00) ConvertThreadToFiber(NULL); } \
   if ((L2COCO(NL)->fib = CreateFiber(cstacksize, mainfunc, NL)) == NULL) \
     luaD_throw(OL, LUA_ERRMEM);
 
 #define COCO_FREE(L) \
-  DeleteFiber(L2COCO(L)->fib);
+  DeleteFiber(L2COCO(L)->fib); \
+  L2COCO(L)->fib = NULL;
 
+/* See: http://blogs.msdn.com/oldnewthing/archive/2004/12/31/344799.aspx */
 #define COCO_JUMPIN(coco) \
-  coco->back = GetCurrentFiber(); \
+  { void *cur = GetCurrentFiber(); \
+    coco->back = (cur == NULL || cur == (void *)0x1e00) ? \
+      ConvertThreadToFiber(NULL) : cur; } \
   SwitchToFiber(coco->fib);
 
 #define COCO_JUMPOUT(coco) \
@@ -381,7 +382,8 @@ typedef void (*coco_MainFunc)(void);
 
 #define COCO_FREE(L) \
   STACK_DEREG(L2COCO(L)) \
-  luaM_freemem(L, L2COCO(L)->allocptr, L2COCO(L)->allocsize);
+  luaM_freemem(L, L2COCO(L)->allocptr, L2COCO(L)->allocsize); \
+  L2COCO(L) = NULL;
 
 #define COCO_JUMPIN(coco)	COCO_SWITCH(coco->back, coco->ctx)
 #define COCO_JUMPOUT(coco)	COCO_SWITCH(coco->ctx, coco->back)
@@ -460,6 +462,11 @@ int luaCOCO_resume(lua_State *L, int nargs)
   coco_State *coco = L2COCO(L);
   coco->nargs = nargs;
   COCO_JUMPIN(coco)
+#ifndef COCO_DISABLE_EARLY_FREE
+  if (L->status != LUA_YIELD) {
+    COCO_FREE(L)
+  }
+#endif
   return L->status;
 }
 

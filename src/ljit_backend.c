@@ -202,10 +202,12 @@ nextdeopt:
   if (deopt) {  /* Partial deoptimization. */
     /* TODO: check deopt chain length? problem: pairs TFOR_CTL migration. */
     int pc, lastpc;
+    lua_Number n;
     const TValue *obj = luaH_getnum(deopt, deoptidx++);
     if (ttisnil(obj) && deoptidx != 2) return JIT_S_OK;
     if (!ttisnumber(obj)) return JIT_S_COMPILER_ERROR;
-    lua_number2int(pc, nvalue(obj));
+    n = nvalue(obj);
+    lua_number2int(pc, n);
     firstpc = JIT_IH_IDX(pc);
     lastpc = firstpc + JIT_IH_LIB(pc);
     if (firstpc < 1 || firstpc > maxpc || lastpc > maxpc ||

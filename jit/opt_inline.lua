@@ -16,7 +16,7 @@
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 10100, "LuaJIT core/library version mismatch")
+assert(jit.version_num == 10102, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local type, rawget, next = type, rawget, next
 local hints, fhints = jutil.hints, jutil.fhints

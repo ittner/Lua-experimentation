@@ -10,9 +10,9 @@
 local _info = {
   name =	"DynASM",
   description =	"A dynamic assembler for code generation engines",
-  version =	"1.1.0",
-  vernum =	 10100,
-  release =	"2006-03-13",
+  version =	"1.1.1",
+  vernum =	 10101,
+  release =	"2006-06-14",
   author =	"Mike Pall",
   url =		"http://luajit.luaforge.net/dynasm.html",
   license =	"MIT",
@@ -215,17 +215,20 @@ function opt_map.U(args)
   end
 end
 
+-- Helper for definesubst.
+local gotsubst
+
+local function definesubst_one(word)
+  local subst = map_def[word]
+  if subst then gotsubst = word; return subst else return word end
+end
+
 -- Iteratively substitute defines.
 local function definesubst(stmt)
-  local gotsubst
   -- Limit number of iterations.
   for i=1,100 do
     gotsubst = false
-    stmt = gsub(stmt, "#?[%w_]+", function(word)
-      local subst = map_def[word]
-      if subst then gotsubst = word; return subst
-      else return word end
-    end)
+    stmt = gsub(stmt, "#?[%w_]+", definesubst_one)
     if not gotsubst then break end
   end
   if gotsubst then wfatal("recursive define involving `"..gotsubst.."'") end
@@ -708,6 +711,23 @@ end
 
 ------------------------------------------------------------------------------
 
+-- Helper for splitstmt.
+local splitlvl
+
+local function splitstmt_one(c)
+  if c == "(" then
+    splitlvl = ")"..splitlvl
+  elseif c == "[" then
+    splitlvl = "]"..splitlvl
+  elseif c == ")" or c == "]" then
+    if sub(splitlvl, 1, 1) ~= c then werror("unbalanced () or []") end
+    splitlvl = sub(splitlvl, 2)
+  elseif splitlvl == "" then
+    return " \0 "
+  end
+  return c
+end
+
 -- Split statement into (pseudo-)opcode and params.
 local function splitstmt(stmt)
   -- Convert label with trailing-colon into .label statement.
@@ -715,21 +735,9 @@ local function splitstmt(stmt)
   if label then return ".label", {label} end
 
   -- Split at commas and equal signs, but obey parentheses and brackets.
-  local lvl = ""
-  stmt = gsub(stmt, "[,%(%)%[%]]", function(c)
-    if c == "(" then
-      lvl = ")"..lvl
-    elseif c == "[" then
-      lvl = "]"..lvl
-    elseif c == ")" or c == "]" then
-      if sub(lvl, 1, 1) ~= c then werror("unbalanced () or []") end
-      lvl = sub(lvl, 2)
-    elseif lvl == "" then
-      return " \0 "
-    end
-    return c
-  end)
-  if lvl ~= "" then werror("unbalanced () or []") end
+  splitlvl = ""
+  stmt = gsub(stmt, "[,%(%)%[%]]", splitstmt_one)
+  if splitlvl ~= "" then werror("unbalanced () or []") end
 
   -- Split off opcode.
   local op, other = match(stmt, "^%s*([^%s%z]+)%s*(.*)$")
@@ -915,6 +923,9 @@ local function translate(infile, outfile)
   readfile(fin)
 
   -- Check for errors.
+  if not g_arch then
+    wprinterr(g_fname, ":*: error: missing .arch directive\n")
+  end
   checkconds()
   checkmacros()
   checkcaptures()

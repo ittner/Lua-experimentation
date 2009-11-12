@@ -1,5 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>Installing LuaJIT</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
@@ -142,7 +142,7 @@ Lua header files.
 <p>
 Compiled bytecode and loadable C modules are fully compatible and
 can be freely exchanged between LuaJIT and the <em>same</em>
-version of Lua it is based on. Please verify that <tt>LUA_VERSION</tt>
+version of Lua it is based on. Please verify that <tt>LUA_RELEASE</tt>
 in <tt>src/lua.h</tt> is the same in both distributions.
 </p>
 
@@ -219,7 +219,7 @@ distribution (use the <em>same</em> version your copy of LuaJIT
 is based on). This avoids dragging in most of LuaJIT which is not
 needed for the pure bytecode compiler. You can also use the bare-bones
 Lua to bytecode translator <tt>luac.lua</tt> (look in the <tt>test</tt>
-directory of the distribution).
+directory of the Lua distribution).
 </p>
 
 <h3>Windows</h3>
@@ -257,8 +257,8 @@ already does this for you.</li>
 <li><em>Caveat:</em> LuaJIT is based on Lua 5.1 which
 means the <tt>luaopen_*()</tt> functions <em>must not</em>
 be called directly. See <tt>src/linit.c</tt> for the proper way to
-run them. You'll get a crash in the <tt>io</tt> library if you
-don't follow these instructions.</li>
+run them. You'll get an error initializing the <tt>io</tt> library
+if you don't follow these instructions.</li>
 <li>To use the optimizer (strongly recommended) you need to:
 <ul>
 <li>Install the optimizer modules <tt>jit.opt</tt> and

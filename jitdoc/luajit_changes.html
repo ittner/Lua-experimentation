@@ -1,5 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>LuaJIT Change History</title>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=iso-8859-1" />
@@ -61,7 +61,7 @@
 <div id="main">
 <p>
 This is a list of changes between the released versions of LuaJIT.
-The current version is <strong>LuaJIT&nbsp;1.1.0</strong>.
+The current version is <strong>LuaJIT&nbsp;1.1.2</strong>.
 </p>
 <p>
 Please check the
@@ -69,7 +69,29 @@ Please check the
 to see whether newer versions are available.
 </p>
 
-<h2>LuaJIT 1.1.0 &mdash; 2006-03-13</h2>
+<h2 id="LuaJIT-1.1.2">LuaJIT 1.1.2 &mdash; 2006-06-24</h2>
+<ul>
+<li>Fix MSVC inline assembly: use only local variables with
+<tt>lua_number2int()</tt>.</li>
+<li>Fix "attempt to call a thread value" bug on Mac OS X:
+make values of consts used as lightuserdata keys unique
+to avoid joining by the compiler/linker.</li>
+</ul>
+
+<h2 id="LuaJIT-1.1.1">LuaJIT 1.1.1 &mdash; 2006-06-20</h2>
+<ul>
+<li>Merged with Lua 5.1.1. Fixes all
+<a href="http://www.lua.org/bugs.html#5.1"><span class="ext">&raquo;</span>&nbsp;known bugs in Lua 5.1</a>.</li>
+<li>Enforce (dynamic) linker error for EXE/DLL version mismatches.</li>
+<li>Minor changes to DynASM: faster preprocessing, smaller encoding
+for some immediates.</li>
+</ul>
+<p>
+This release is in sync with Coco 1.1.1 (see the
+<a href="coco_changes.html">Coco Change History</a>).
+</p>
+
+<h2 id="LuaJIT-1.1.0">LuaJIT 1.1.0 &mdash; 2006-03-13</h2>
 <ul>
 <li>Merged with Lua 5.1 (final).</li>
 
@@ -168,7 +190,7 @@ This release is in sync with Coco 1.1.0 (see the
 <a href="coco_changes.html">Coco Change History</a>).
 </p>
 
-<h2>LuaJIT 1.0.3 &mdash; 2005-09-08</h2>
+<h2 id="LuaJIT-1.0.3">LuaJIT 1.0.3 &mdash; 2005-09-08</h2>
 <ul>
 <li>Even more docs.</li>
 <li>Unified closure checks in <tt>jit.*</tt>.</li>
@@ -180,7 +202,7 @@ This release is in sync with Coco 1.1.0 (see the
 This is the first public release of LuaJIT.
 </p>
 
-<h2>LuaJIT 1.0.2 &mdash; 2005-09-02</h2>
+<h2 id="LuaJIT-1.0.2">LuaJIT 1.0.2 &mdash; 2005-09-02</h2>
 <ul>
 <li>Add support for flushing the Valgrind translation cache <br />
 (<tt>MYCFLAGS= -DUSE_VALGRIND</tt>).</li>
@@ -200,7 +222,7 @@ Still no support in the backend for inlining.</li>
 Not released because Lua 5.1 alpha came out today.
 </p>
 
-<h2>LuaJIT 1.0.1 &mdash; 2005-08-31</h2>
+<h2 id="LuaJIT-1.0.1">LuaJIT 1.0.1 &mdash; 2005-08-31</h2>
 <ul>
 <li>Missing GC step in <tt>OP_CONCAT</tt>.</li>
 <li>Fix result handling for C &ndash;> JIT calls.</li>
@@ -217,7 +239,7 @@ Interim non-public release.
 Special thanks to Adam D. Moss for reporting most of the bugs.
 </p>
 
-<h2>LuaJIT 1.0.0 &mdash; 2005-08-29</h2>
+<h2 id="LuaJIT-1.0.0">LuaJIT 1.0.0 &mdash; 2005-08-29</h2>
 <p>
 This is the initial non-public release of LuaJIT.
 </p>

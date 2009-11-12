@@ -32,8 +32,9 @@
 /* ------------------------------------------------------------------------ */
 
 /* Static pointer addresses used as registry keys. */
-static const int regkey_frontend = 1;
-static const int regkey_comthread = 1;
+/* The values do not matter, but must be different to prevent joining. */
+static const int regkey_frontend = 0x6c6a6c01;
+static const int regkey_comthread = 0x6c6a6c02;
 
 /* Check that the first argument is a Lua function and return its closure. */
 static Closure *check_LCL(lua_State *L)
@@ -275,11 +276,9 @@ static int frontwrap(lua_State *L, Table *st)
     if (!lua_checkstack(L, 3)) return JIT_S_COMPILER_ERROR;
     sethvalue(L, L->top++, st);  /* Prevent GC of state table. */
     lua_pushlightuserdata(L, (void *)&regkey_comthread);
-#if !defined(COCO_DISABLE) && defined(LUAJIT_COMPILER_CSTACK)
-    J->L = lua_newcthread(L, LUAJIT_COMPILER_CSTACK);  /* Ensure C stack. */
-#else
+    /* Cannot use C stack, since it's deallocated early in Coco. */
+    /* But we don't need one -- the compiler thread never yields, anyway. */
     J->L = lua_newthread(L);
-#endif
     lua_rawset(L, LUA_REGISTRYINDEX);
     L->top--;  /* Remove state table from this stack. */
   }

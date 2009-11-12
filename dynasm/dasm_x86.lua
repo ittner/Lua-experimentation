@@ -9,9 +9,9 @@
 local _info = {
   arch =	"x86",
   description =	"DynASM x86 (i386) module",
-  version =	"1.1.0",
-  vernum =	 10100,
-  release =	"2006-03-13",
+  version =	"1.1.1",
+  vernum =	 10101,
+  release =	"2006-06-14",
   author =	"Mike Pall",
   license =	"MIT",
 }
@@ -21,11 +21,12 @@ local _M = { _info = _info }
 
 -- Cache library functions.
 local type, tonumber, pairs, ipairs = type, tonumber, pairs, ipairs
-local assert = assert
+local assert, unpack = assert, unpack
 local _s = string
-local sub, match, gmatch, gsub = _s.sub, _s.match, _s.gmatch, _s.gsub
-local format, byte = _s.format, _s.byte
+local sub, format, byte, char = _s.sub, _s.format, _s.byte, _s.char
+local find, match, gmatch, gsub = _s.find, _s.match, _s.gmatch, _s.gsub
 local concat, sort = table.concat, table.sort
+local char, unpack = string.char, unpack
 
 -- Inherited tables and callbacks.
 local g_opt, g_arch
@@ -67,8 +68,10 @@ local map_action = {}
 -- First action number. Everything below does not need to be escaped.
 local actfirst = 256-#action_names
 
--- Action list buffer.
+-- Action list buffer and string (only used to remove dupes).
 local actlist = {}
+local actstr = ""
+
 -- Argument list for next dasm_put(). Start with offset 0 into action list.
 local actargs = { 0 }
 
@@ -131,23 +134,16 @@ local function wcall(func, args)
   wline(format("dasm_%s(Dst, %s);", func, concat(args, ", ")), true)
 end
 
--- Delete duplicate action list chunks. Slow, but so what.
+-- Delete duplicate action list chunks. A tad slow, but so what.
 local function dedupechunk(offset)
-  local al = actlist
-  local chunksize = #actlist - offset
-  local last = actlist[#actlist]
-  for i=0,offset-chunksize do
-    if al[i+chunksize] == last then
-      local dup = true
-      for j=1,chunksize-1 do
-	if al[i+j] ~= al[offset+j] then dup = false; break end
-      end
-      if dup then
-	actargs[1] = i -- Replace with original offset.
-	for j=offset+1,#actlist do al[j] = nil end -- Kill dupe.
-	return
-      end
-    end
+  local al, as = actlist, actstr
+  local chunk = char(unpack(al, offset+1, #al))
+  local orig = find(as, chunk, 1, true)
+  if orig then
+    actargs[1] = orig-1 -- Replace with original offset.
+    for i=offset+1,#al do al[i] = nil end -- Kill dupe.
+  else
+    actstr = as..chunk
   end
 end
 
@@ -575,10 +571,11 @@ local function parseoperand(param)
       end
       if imm then
 	if t.opsize then werror("bad operand size override") end
-	t.imm = imm
 	local m = "i"
 	if imm == 1 then m = m.."1" end
+	if imm >= 4294967168 and imm <= 4294967295 then imm = imm-4294967296 end
 	if imm >= -128 and imm <= 127 then m = m.."S" end
+	t.imm = imm
 	t.mode = m
 	break
       end

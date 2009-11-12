@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.157 2005/12/29 16:23:32 roberto Exp $
+** $Id: lua.c,v 1.160 2006/06/02 15:34:00 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,7 @@ static int docall (lua_State *L, int narg, int clear) {
 
 
 static void print_version (void) {
-  l_message(NULL, LUA_VERSION "  " LUA_COPYRIGHT);
+  l_message(NULL, LUA_RELEASE "  " LUA_COPYRIGHT);
   l_message(NULL, LUAJIT_VERSION "  " LUAJIT_COPYRIGHT);
 }
 
@@ -308,17 +308,30 @@ static int dojitopt (lua_State *L, const char *opt) {
 
 /* ---- end of LuaJIT extensions */
 
+/* check that argument has no extra characters at the end */
+#define notail(x)	{if ((x)[2] != '\0') return -1;}
+
+
 static int collectargs (char **argv, int *pi, int *pv, int *pe) {
   int i;
   for (i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] != '-')  /* not an option? */
         return i;
     switch (argv[i][1]) {  /* option */
-      case '-': return (argv[i+1] != NULL ? i+1 : 0);
-      case '\0': return i;
-      case 'i': *pi = 1;  /* go through */
-      case 'v': *pv = 1; break;
-      case 'e': *pe = 1;  /* go through */
+      case '-':
+        notail(argv[i]);
+        return (argv[i+1] != NULL ? i+1 : 0);
+      case '\0':
+        return i;
+      case 'i':
+        notail(argv[i]);
+        *pi = 1;  /* go through */
+      case 'v':
+        notail(argv[i]);
+        *pv = 1;
+        break;
+      case 'e':
+        *pe = 1;  /* go through */
       case 'j':  /* LuaJIT extension */
       case 'l':
         if (argv[i][2] == '\0') {
@@ -376,12 +389,12 @@ static int runargs (lua_State *L, char **argv, int n) {
 
 
 static int handle_luainit (lua_State *L) {
-  const char *init = getenv("LUA_INIT");
+  const char *init = getenv(LUA_INIT);
   if (init == NULL) return 0;  /* status OK */
   else if (init[0] == '@')
     return dofile(L, init+1);
   else
-    return dostring(L, init, "=LUA_INIT");
+    return dostring(L, init, "=" LUA_INIT);
 }
 
 
@@ -399,6 +412,7 @@ static int pmain (lua_State *L) {
   int has_i = 0, has_v = 0, has_e = 0;
   globalL = L;
   if (argv[0] && argv[0][0]) progname = argv[0];
+  LUAJIT_VERSION_SYM();  /* linker-enforced version check */
   lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
   lua_gc(L, LUA_GCRESTART, 0);
