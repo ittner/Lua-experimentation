@@ -1,130 +1,84 @@
-# makefile for installing Lua
-# see INSTALL for installation instructions
-# see src/Makefile and src/luaconf.h for further customization
-
-# == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
-
-# Your platform. See PLATS for possible values.
-PLAT= none
-
-# Where to install. The installation starts in the src and doc directories,
-# so take care if INSTALL_TOP is not an absolute path.
-INSTALL_TOP= /usr/local
-INSTALL_BIN= $(INSTALL_TOP)/bin
-INSTALL_INC= $(INSTALL_TOP)/include
-INSTALL_LIB= $(INSTALL_TOP)/lib
-INSTALL_MAN= $(INSTALL_TOP)/man/man1
+##############################################################################
+# LuaJIT top level Makefile for installation. Requires GNU Make.
 #
-# You probably want to make INSTALL_LMOD and INSTALL_CMOD consistent with
-# LUA_ROOT, LUA_LDIR, and LUA_CDIR in luaconf.h (and also with etc/luajit.pc).
-INSTALL_LMOD= $(INSTALL_TOP)/share/lua/$V
-INSTALL_CMOD= $(INSTALL_TOP)/lib/lua/$V
-
-# How to install. If your install program does not support "-p", then you
-# may have to run ranlib on the installed liblua.a (do "make ranlib").
-INSTALL= install -p
-INSTALL_EXEC= $(INSTALL) -m 0755
-INSTALL_DATA= $(INSTALL) -m 0644
+# Suitable for POSIX platforms (Linux, *BSD, OSX etc.).
+# Note: src/Makefile has many more configurable options.
 #
-# If you don't have install you can use cp instead.
-# INSTALL= cp -p
-# INSTALL_EXEC= $(INSTALL)
-# INSTALL_DATA= $(INSTALL)
+# ##### This Makefile is NOT useful for installation on Windows! #####
+# For MSVC, please follow the instructions given in src/msvcbuild.bat.
+# For MinGW and Cygwin, cd to src and run make with the Makefile there.
+# NYI: add wininstall.bat
+#
+# Copyright (C) 2005-2009 Mike Pall. See Copyright Notice in luajit.h
+##############################################################################
 
-# Utilities.
+BASEVER= 2.0.0
+VERSION= 2.0.0-beta1
+
+##############################################################################
+#
+# Change the installation path as needed and modify src/luaconf.h accordingly.
+# Note: PREFIX must be an absolute path!
+#
+PREFIX= /usr/local
+##############################################################################
+
+INSTALL_BIN= $(PREFIX)/bin
+INSTALL_NAME= luajit-$(VERSION)
+INSTALL_T= $(INSTALL_BIN)/$(INSTALL_NAME)
+INSTALL_TSYM= $(INSTALL_BIN)/luajit
+INSTALL_INC= $(PREFIX)/include/luajit-$(BASEVER)
+INSTALL_JITLIB= $(PREFIX)/share/luajit-$(VERSION)/jit
+
 MKDIR= mkdir -p
-RANLIB= ranlib
+SYMLINK= ln -f -s
+INSTALL_X= install -m 0755
+INSTALL_F= install -m 0644
 
-# == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
+FILES_T= luajit
+FILES_INC= lua.h lualib.h lauxlib.h luaconf.h lua.hpp luajit.h
+FILES_JITLIB= bc.lua v.lua dump.lua dis_x86.lua dis_x64.lua vmdef.lua
 
-# Convenience platforms targets.
-PLATS= linux bsd macosx solaris mingw cygwin posix generic linux_rl bsd_rl macosx_rl
+##############################################################################
 
-# What to install.
-TO_BIN= luajit
-###TO_INC= lua.h luaconf.h lualib.h lauxlib.h ../etc/lua.hpp
-###TO_LIB= liblua.a
-###TO_MAN= lua.1 luac.1
+INSTALL_DEP= src/luajit
 
-# Lua version and release.
-V= 5.1
-R= 5.1.4
-# LuaJIT version.
-JV= 1.1.5
+all $(INSTALL_DEP):
+	@echo "==== Building LuaJIT $(VERSION) ===="
+	$(MAKE) -C src
+	@echo "==== Successfully built LuaJIT $(VERSION) ===="
 
-all:	$(PLAT)
-
-$(PLATS) clean:
-	cd src && $(MAKE) $@
-
-test:	dummy
-	src/luajit -O -e 'io.write("Hello world, from ", jit.version, "!\n")'
-
-install: dummy
-	cd src && $(MKDIR) $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN) $(INSTALL_LMOD) $(INSTALL_CMOD) $(INSTALL_LMOD)/jit
-	cd src && $(INSTALL_EXEC) $(TO_BIN) $(INSTALL_BIN)
-	###cd src && $(INSTALL_DATA) $(TO_INC) $(INSTALL_INC)
-	###cd src && $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
-	###cd doc && $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
-	cd jit && $(INSTALL_DATA) *.lua $(INSTALL_LMOD)/jit
-
-ranlib:
-	cd src && cd $(INSTALL_LIB) && $(RANLIB) $(TO_LIB)
-
-none:
-	@echo "Please do"
-	@echo "   make PLATFORM"
-	@echo "where PLATFORM is one of these:"
-	@echo "   $(PLATS)"
-	@echo "See jitdoc/luajit_install.html for complete instructions."
-
-# make may get confused with test/ and INSTALL in a case-insensitive OS
-dummy:
-
-# echo config parameters
-echo:
+install: $(INSTALL_DEP)
+	@echo "==== Installing LuaJIT $(VERSION) to $(PREFIX) ===="
+	$(MKDIR) $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_JITLIB)
+	cd src && $(INSTALL_X) $(FILES_T) $(INSTALL_T)
+	cd src && $(INSTALL_F) $(FILES_INC) $(INSTALL_INC)
+	cd lib && $(INSTALL_F) $(FILES_JITLIB) $(INSTALL_JITLIB)
+	@echo "==== Successfully installed LuaJIT $(VERSION) to $(PREFIX) ===="
 	@echo ""
-	@echo "These are the parameters currently set in src/Makefile to build LuaJIT $(JV):"
+	@echo "Note: the beta releases deliberately do NOT install a symlink for luajit"
+	@echo "You can do this now by running this command (with sudo):"
 	@echo ""
-	@cd src && $(MAKE) -s echo
-	@echo ""
-	@echo "These are the parameters currently set in Makefile to install LuaJIT $(JV):"
-	@echo ""
-	@echo "PLAT = $(PLAT)"
-	@echo "INSTALL_TOP = $(INSTALL_TOP)"
-	@echo "INSTALL_BIN = $(INSTALL_BIN)"
-	@echo "INSTALL_INC = $(INSTALL_INC)"
-	@echo "INSTALL_LIB = $(INSTALL_LIB)"
-	@echo "INSTALL_MAN = $(INSTALL_MAN)"
-	@echo "INSTALL_LMOD = $(INSTALL_LMOD)"
-	@echo "INSTALL_CMOD = $(INSTALL_CMOD)"
-	@echo "INSTALL_EXEC = $(INSTALL_EXEC)"
-	@echo "INSTALL_DATA = $(INSTALL_DATA)"
-	@echo ""
-	@echo "See also src/luaconf.h ."
+	@echo "  $(SYMLINK) $(INSTALL_NAME) $(INSTALL_TSYM)"
 	@echo ""
 
-# echo private config parameters
-pecho:
-	@echo "V = $(V)"
-	@echo "R = $(R)"
-	@echo "JV = $(JV)"
-	@echo "TO_BIN = $(TO_BIN)"
-	@echo "TO_INC = $(TO_INC)"
-	@echo "TO_LIB = $(TO_LIB)"
-	@echo "TO_MAN = $(TO_MAN)"
+##############################################################################
 
-# echo config parameters as Lua code
-# uncomment the last sed expression if you want nil instead of empty strings
-lecho:
-	@echo "-- installation parameters for Lua $(R), LuaJIT $(JV)"
-	@echo "VERSION = '$(V)'"
-	@echo "RELEASE = '$(R)'"
-	@echo "LUAJIT_VERSION = '$(JV)'"
-	@$(MAKE) echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
-	@echo "-- EOF"
+amalg:
+	@echo "Building LuaJIT $(VERSION)"
+	$(MAKE) -C src amalg
 
-# list targets that do not create files (but not all makes understand .PHONY)
-.PHONY: all $(PLATS) clean test install local none dummy echo pecho lecho
+clean:
+	$(MAKE) -C src clean
 
-# (end of Makefile)
+cleaner:
+	$(MAKE) -C src cleaner
+
+distclean:
+	$(MAKE) -C src distclean
+
+SUB_TARGETS= amalg clean cleaner distclean
+
+.PHONY: all install $(SUB_TARGETS)
+
+##############################################################################
