@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.97 2012/05/23 15:37:09 roberto Exp $
+** $Id: lstate.c,v 2.99 2012/10/02 17:40:53 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@
 */
 #if !defined(luai_makeseed)
 #include <time.h>
-#define luai_makeseed()		cast(size_t, time(NULL))
+#define luai_makeseed()		cast(unsigned int, time(NULL))
 #endif
 
 
@@ -79,7 +79,7 @@ typedef struct LG {
 
 /*
 ** Compute an initial seed as random as possible. In ANSI, rely on
-** Address Space Layour Randomization (if present) to increase
+** Address Space Layout Randomization (if present) to increase
 ** randomness..
 */
 #define addbuff(b,p,e) \

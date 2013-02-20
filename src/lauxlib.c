@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.243 2012/04/20 17:05:17 roberto Exp $
+** $Id: lauxlib.c,v 1.247 2012/10/19 15:55:01 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -84,7 +84,7 @@ static void pushfuncname (lua_State *L, lua_Debug *ar) {
   if (*ar->namewhat != '\0')  /* is there a name? */
     lua_pushfstring(L, "function " LUA_QS, ar->name);
   else if (*ar->what == 'm')  /* main? */
-      lua_pushfstring(L, "main chunk");
+      lua_pushliteral(L, "main chunk");
   else if (*ar->what == 'C') {
     if (pushglobalfuncname(L, ar)) {
       lua_pushfstring(L, "function " LUA_QS, lua_tostring(L, -1));
@@ -158,7 +158,8 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   if (strcmp(ar.namewhat, "method") == 0) {
     narg--;  /* do not count `self' */
     if (narg == 0)  /* error is in the self argument itself? */
-      return luaL_error(L, "calling " LUA_QS " on bad self", ar.name);
+      return luaL_error(L, "calling " LUA_QS " on bad self (%s)",
+                           ar.name, extramsg);
   }
   if (ar.name == NULL)
     ar.name = (pushglobalfuncname(L, &ar)) ? lua_tostring(L, -1) : "?";
@@ -214,7 +215,7 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
     if (fname)
       lua_pushfstring(L, "%s: %s", fname, strerror(en));
     else
-      lua_pushfstring(L, "%s", strerror(en));
+      lua_pushstring(L, strerror(en));
     lua_pushinteger(L, en);
     return 3;
   }
@@ -438,7 +439,7 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
   if (B->size - B->n < sz) {  /* not enough space? */
     char *newbuff;
     size_t newsize = B->size * 2;  /* double buffer size */
-    if (newsize - B->n < sz)  /* not bit enough? */
+    if (newsize - B->n < sz)  /* not big enough? */
       newsize = B->n + sz;
     if (newsize < B->n || newsize - B->n < sz)
       luaL_error(L, "buffer too large");
@@ -520,11 +521,11 @@ LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
-  t = lua_absindex(L, t);
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
   }
+  t = lua_absindex(L, t);
   lua_rawgeti(L, t, freelist);  /* get first free element */
   ref = (int)lua_tointeger(L, -1);  /* ref = t[freelist] */
   lua_pop(L, 1);  /* remove it from stack */
@@ -866,8 +867,8 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
   lua_getfield(L, idx, fname);
   if (lua_istable(L, -1)) return 1;  /* table already there */
   else {
-    idx = lua_absindex(L, idx);
     lua_pop(L, 1);  /* remove previous result */
+    idx = lua_absindex(L, idx);
     lua_newtable(L);
     lua_pushvalue(L, -1);  /* copy to be left at top */
     lua_setfield(L, idx, fname);  /* assign new table to field */
