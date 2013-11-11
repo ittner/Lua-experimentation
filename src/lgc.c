@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.138 2012/10/19 19:00:33 roberto Exp $
+** $Id: lgc.c,v 2.140.1.2 2013/04/26 18:22:05 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -450,7 +450,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
   else  /* not weak */
     traversestrongtable(g, h);
   return sizeof(Table) + sizeof(TValue) * h->sizearray +
-                         sizeof(Node) * sizenode(h);
+                         sizeof(Node) * cast(size_t, sizenode(h));
 }
 
 
@@ -493,17 +493,24 @@ static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
 
 
 static lu_mem traversestack (global_State *g, lua_State *th) {
+  int n = 0;
   StkId o = th->stack;
   if (o == NULL)
     return 1;  /* stack not completely built yet */
-  for (; o < th->top; o++)
+  for (; o < th->top; o++)  /* mark live elements in the stack */
     markvalue(g, o);
   if (g->gcstate == GCSatomic) {  /* final traversal? */
     StkId lim = th->stack + th->stacksize;  /* real end of stack */
     for (; o < lim; o++)  /* clear not-marked stack slice */
       setnilvalue(o);
   }
-  return sizeof(lua_State) + sizeof(TValue) * th->stacksize;
+  else {  /* count call infos to compute size */
+    CallInfo *ci;
+    for (ci = &th->base_ci; ci != th->ci; ci = ci->next)
+      n++;
+  }
+  return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
+         sizeof(CallInfo) * n;
 }
 
 
@@ -924,7 +931,7 @@ static void setpause (global_State *g, l_mem estimate) {
 ** object inside the list (instead of to the header), so that the real
 ** sweep do not need to skip objects created between "now" and the start
 ** of the real sweep.
-** Returns how many objects it sweeped.
+** Returns how many objects it swept.
 */
 static int entersweep (lua_State *L) {
   global_State *g = G(L);
