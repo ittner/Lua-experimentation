@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.126 2014/06/02 03:00:51 roberto Exp $
+** $Id: liolib.c,v 2.136 2014/10/22 16:55:57 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@
 /* ANSI definitions */
 #define l_popen(L,c,m)  \
 	  ((void)((void)c, m), \
-	  luaL_error(L, LUA_QL("popen") " not supported"), \
+	  luaL_error(L, "'popen' not supported"), \
 	  (FILE*)0)
 #define l_pclose(L,file)		((void)L, (void)file, -1)
 
@@ -135,6 +135,7 @@
 
 
 #define IO_PREFIX	"_IO_"
+#define IOPREF_LEN	(sizeof(IO_PREFIX)/sizeof(char) - 1)
 #define IO_INPUT	(IO_PREFIX "input")
 #define IO_OUTPUT	(IO_PREFIX "output")
 
@@ -193,9 +194,14 @@ static LStream *newprefile (lua_State *L) {
 }
 
 
+/*
+** Calls the 'close' function from a file handle. The 'volatile' avoids
+** a bug in some versions of the Clang compiler (e.g., clang 3.0 for
+** 32 bits).
+*/
 static int aux_close (lua_State *L) {
   LStream *p = tolstream(L);
-  lua_CFunction cf = p->closef;
+  volatile lua_CFunction cf = p->closef;
   p->closef = NULL;  /* mark stream as closed */
   return (*cf)(L);  /* close it */
 }
@@ -239,7 +245,7 @@ static void opencheck (lua_State *L, const char *fname, const char *mode) {
   LStream *p = newfile(L);
   p->f = fopen(fname, mode);
   if (p->f == NULL)
-    luaL_error(L, "cannot open file " LUA_QS " (%s)", fname, strerror(errno));
+    luaL_error(L, "cannot open file '%s' (%s)", fname, strerror(errno));
 }
 
 
@@ -285,7 +291,7 @@ static FILE *getiofile (lua_State *L, const char *findex) {
   lua_getfield(L, LUA_REGISTRYINDEX, findex);
   p = (LStream *)lua_touserdata(L, -1);
   if (isclosed(p))
-    luaL_error(L, "standard %s file is closed", findex + strlen(IO_PREFIX));
+    luaL_error(L, "standard %s file is closed", findex + IOPREF_LEN);
   return p->f;
 }
 
@@ -402,52 +408,52 @@ static int test2 (RN *rn, const char *set) {
 
 
 /*
-** Read a sequence of (hexa)digits
+** Read a sequence of (hex)digits
 */
-static int readdigits (RN *rn, int hexa) {
+static int readdigits (RN *rn, int hex) {
   int count = 0;
-  while ((hexa ? isxdigit(rn->c) : isdigit(rn->c)) && nextc(rn))
+  while ((hex ? isxdigit(rn->c) : isdigit(rn->c)) && nextc(rn))
     count++;
   return count;
 }
 
 
 /* access to locale "radix character" (decimal point) */
-#if !defined(getlocaledecpoint)
-#define getlocaledecpoint()     (localeconv()->decimal_point[0])
+#if !defined(l_getlocaledecpoint)
+#define l_getlocaledecpoint()     (localeconv()->decimal_point[0])
 #endif
 
 
 /*
 ** Read a number: first reads a valid prefix of a numeral into a buffer.
-** Then it calls 'lua_strtonum' to check whether the format is correct
-** and to convert it to a Lua number
+** Then it calls 'lua_stringtonumber' to check whether the format is
+** correct and to convert it to a Lua number
 */
 static int read_number (lua_State *L, FILE *f) {
   RN rn;
   int count = 0;
-  int hexa = 0;
+  int hex = 0;
   char decp[2] = ".";
   rn.f = f; rn.n = 0;
-  decp[0] = getlocaledecpoint();  /* get decimal point from locale */
+  decp[0] = l_getlocaledecpoint();  /* get decimal point from locale */
   l_lockfile(rn.f);
   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
   test2(&rn, "-+");  /* optional signal */
   if (test2(&rn, "0")) {
-    if (test2(&rn, "xX")) hexa = 1;  /* numeral is hexadecimal */
+    if (test2(&rn, "xX")) hex = 1;  /* numeral is hexadecimal */
     else count = 1;  /* count initial '0' as a valid digit */
   }
-  count += readdigits(&rn, hexa);  /* integral part */
+  count += readdigits(&rn, hex);  /* integral part */
   if (test2(&rn, decp))  /* decimal point? */
-    count += readdigits(&rn, hexa);  /* fractionary part */
-  if (count > 0 && test2(&rn, (hexa ? "pP" : "eE"))) {  /* exponent mark? */
+    count += readdigits(&rn, hex);  /* fractional part */
+  if (count > 0 && test2(&rn, (hex ? "pP" : "eE"))) {  /* exponent mark? */
     test2(&rn, "-+");  /* exponent signal */
     readdigits(&rn, 0);  /* exponent digits */
   }
   ungetc(rn.c, rn.f);  /* unread look-ahead char */
   l_unlockfile(rn.f);
   rn.buff[rn.n] = '\0';  /* finish string */
-  if (lua_strtonum(L, rn.buff))  /* is this a valid number? */
+  if (lua_stringtonumber(L, rn.buff))  /* is this a valid number? */
     return 1;  /* ok */
   else {  /* invalid format */
    lua_pushnil(L);  /* "result" to be removed */
@@ -576,7 +582,7 @@ static int io_readline (lua_State *L) {
     lua_pushvalue(L, lua_upvalueindex(3 + i));
   n = g_read(L, p->f, 2);  /* 'n' is number of results */
   lua_assert(n > 0);  /* should return at least a nil */
-  if (!lua_isnil(L, -n))  /* read at least one value? */
+  if (lua_toboolean(L, -n))  /* read at least one value? */
     return n;  /* return them */
   else {  /* first result is nil: EOF or error */
     if (n > 1) {  /* is there error information? */
@@ -654,7 +660,7 @@ static int f_setvbuf (lua_State *L) {
   FILE *f = tofile(L);
   int op = luaL_checkoption(L, 2, NULL, modenames);
   lua_Integer sz = luaL_optinteger(L, 3, LUAL_BUFFERSIZE);
-  int res = setvbuf(f, NULL, mode[op], sz);
+  int res = setvbuf(f, NULL, mode[op], (size_t)sz);
   return luaL_fileresult(L, res == 0, NULL);
 }
 
